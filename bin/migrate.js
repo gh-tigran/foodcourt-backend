@@ -1,7 +1,7 @@
-import {Slides, Offers, Categories, Products, News} from "../models";
+import {Slides, Offers, Categories, Products, News, Map, MapImages} from "../models";
 
 async function main() {
-    for (const Model of [Slides, Offers, Categories, Products, News]) {
+    for (const Model of [Slides, Offers, Categories, Products, News, Map, MapImages]) {
         console.log(Model);
 
         await Model.sync({alter: true});

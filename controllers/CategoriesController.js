@@ -84,7 +84,8 @@ export default class CategoriesController {
     static updateCategory = async (req, res, next) => {
         try {
             const {file} = req;
-            const {id, name} = req.body;
+            const {id} = req.params;
+            const {name} = req.body;
 
             const validate = Joi.object({
                 id: Joi.number().min(1).required(),

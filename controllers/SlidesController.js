@@ -86,7 +86,8 @@ export default class SlidesController {
     static updateSlide = async (req, res, next) => {
         try {
             const {file} = req;
-            const {id, src} = req.body;
+            const {id} = req.params;
+            const {src} = req.body;
 
             const validate = Joi.object({
                 id: Joi.number().min(1).required(),

@@ -100,7 +100,8 @@ export default class NewsController {
     static updateNews = async (req, res, next) => {
         try {
             const {file} = req;
-            const {id, title, description} = req.body;
+            const {id} = req.params;
+            const {title, description} = req.body;
 
             const validate = Joi.object({
                 id: Joi.number().min(1).required(),
