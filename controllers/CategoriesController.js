@@ -1,10 +1,11 @@
-import {Categories} from "../models";
+import {Categories, Products} from "../models";
 import path from "path";
 import fs from "fs";
 import {v4 as uuidV4} from "uuid";
 import HttpError from "http-errors";
 import _ from "lodash";
 import Joi from "joi";
+import slug from "slug";
 
 export default class CategoriesController {
     static getCategories = async (req, res, next) => {
@@ -22,17 +23,17 @@ export default class CategoriesController {
 
     static getSingleCategory = async (req, res, next) => {
         try {
-            const {id} = req.params;
+            const {slugName} = req.params;
 
             const validate = Joi.object({
-                id: Joi.number().min(1).required(),
-            }).validate({id});
+                slugName: Joi.string().min(2).max(80).required(),
+            }).validate({slugName});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
             }
 
-            const category = await Categories.findOne({where: {id}});
+            const category = await Categories.findOne({where: {slugName}});
 
             res.json({
                 status: "ok",
@@ -49,24 +50,26 @@ export default class CategoriesController {
             const {name} = req.body;
 
             const validate = Joi.object({
-                name: Joi.string().min(2).max(75).required(),
+                name: Joi.string().min(2).max(80).required(),
             }).validate({name});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
             }
 
-            if(_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)){
+            if (_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)) {
                 throw HttpError(403, "Doesn't sent Image!");
             }
 
             const filePath = path.join('files', uuidV4() + '-' + file.originalname);
+            const slugName = slug(name);
 
             fs.renameSync(file.path, Categories.getImgPath(filePath));
 
             const createdCategory = await Categories.create({
                 imagePath: filePath,
-                name
+                slugName,
+                name,
             });
 
             res.json({
@@ -84,40 +87,59 @@ export default class CategoriesController {
     static updateCategory = async (req, res, next) => {
         try {
             const {file} = req;
-            const {id} = req.params;
+            const {slugName} = req.params;
             const {name} = req.body;
 
             const validate = Joi.object({
-                id: Joi.number().min(1).required(),
-                name: Joi.string().min(2).max(75).required(),
-            }).validate({id, name});
+                slugName: Joi.string().min(2).max(80).required(),
+                name: Joi.string().min(2).max(80).required(),
+            }).validate({slugName, name});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
             }
 
-            if(_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)){
+            if (_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)) {
                 throw HttpError(403, "Image doesn't sent!");
             }
 
+            const updatingCategory = await Categories.findOne({where: {slugName}});
+
+            if (_.isEmpty(updatingCategory)) {
+                throw HttpError(404, "Not found category from that slug");
+            }
+
             const filePath = path.join('files', uuidV4() + '-' + file.originalname);
+            const updateImgPath = Categories.getImgPath(updatingCategory.imagePath);
+            const slugNameUpdate = slug(name);
+
+            if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath);
 
             fs.renameSync(file.path, Categories.getImgPath(filePath));
 
-            const updatingCategory = await Categories.findOne({where: {id}});
-
-            if(_.isEmpty(updatingCategory)){
-                throw HttpError(404, "Not found category from that id");
-            }
-
-            const updateImgPath = Categories.getImgPath(updatingCategory.imagePath);
-
-            if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath)
-
             const updatedCategory = await Categories.update({
                 imagePath: filePath,
-                name
-            }, {where: {id},});
+                slugName: slugNameUpdate,
+                name,
+            }, {where: {slugName},});
+
+            const products = await Products.findAll({
+                where: {categorySlug: slugName},
+            });
+
+            products.forEach(product => {
+                (async () => {
+                    await Products.update({
+                        imagePath: product.imagePath,
+                        slugName: product.slugName,
+                        categoryId: product.categoryId,
+                        title: product.title,
+                        description: product.description,
+                        price: product.price,
+                        categorySlug: slugNameUpdate,
+                    }, {where: {id: product.id},});
+                })()
+            });
 
             res.json({
                 status: "ok",
@@ -133,27 +155,36 @@ export default class CategoriesController {
 
     static deleteCategory = async (req, res, next) => {
         try {
-            const {id} = req.params;
+            const {slugName} = req.params;
 
             const validate = Joi.object({
-                id: Joi.number().min(1).required(),
-            }).validate({id});
+                slugName: Joi.string().min(2).max(80).required(),
+            }).validate({slugName});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
             }
 
-            const deletingCategory = await Categories.findOne({where: {id}});
+            const deletingCategory = await Categories.findOne({where: {slugName}});
 
-            if(_.isEmpty(deletingCategory)){
-                throw HttpError(404, "Not found category from that id");
+            if (_.isEmpty(deletingCategory)) {
+                throw HttpError(404, "Not found category from that slug");
             }
 
-            const updateImgPath = Categories.getImgPath(deletingCategory.imagePath);
+            const delImgPath = Categories.getImgPath(deletingCategory.imagePath);
+            const products = await Products.findAll({
+                where: {categorySlug: slugName},
+            });
 
-            if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath)
+            if (fs.existsSync(delImgPath)) fs.unlinkSync(delImgPath);
 
-            const deletedCategory = await Categories.destroy({where: {id}});
+            const deletedCategory = await Categories.destroy({where: {slugName}});
+
+            products.forEach(product => {
+                const delProdImgPath = Products.getImgPath(product.imagePath);
+
+                if (fs.existsSync(delProdImgPath)) fs.unlinkSync(delProdImgPath);
+            });
 
             res.json({
                 status: "ok",
@@ -162,5 +193,5 @@ export default class CategoriesController {
         } catch (e) {
             next(e);
         }
-    };
+    }
 }

@@ -13,25 +13,29 @@ Map.init({
         autoIncrement: true,
         allowNull: false
     },
-    x:{
+    lat:{
         type: DataTypes.DOUBLE,
         allowNull: false,
     },
-    y:{
+    lon:{
         type: DataTypes.DOUBLE,
         allowNull: false,
     },
-    fullCoords:{
-        type: DataTypes.TEXT(),
-        allowNull: false,
-        //unique: "fullCoords"
-    },
+    // fullCoords:{
+    //     type: DataTypes.TEXT(),
+    //     allowNull: false,
+    //     //unique: "fullCoords"
+    // },
     title: {
-        type: DataTypes.TEXT(),
+        type: DataTypes.STRING(80),
         allowNull: false,
     },
     location: {
-        type: DataTypes.TEXT(),
+        type: DataTypes.STRING(100),
+        allowNull: false,
+    },
+    slugName: {
+        type: DataTypes.STRING(80),
         allowNull: false,
     },
 }, {

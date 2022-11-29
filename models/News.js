@@ -14,15 +14,19 @@ News.init({
         allowNull: false
     },
     imagePath: {
-        type: DataTypes.TEXT(),
+        type: DataTypes.STRING(150),
         allowNull: false,
     },
     title: {
-        type: DataTypes.TEXT(),
+        type: DataTypes.STRING(80),
         allowNull: false,
     },
     description: {
-        type: DataTypes.TEXT("long"),
+        type: DataTypes.STRING(3000),
+        allowNull: false,
+    },
+    slugName: {
+        type: DataTypes.STRING(80),
         allowNull: false,
     },
 }, {

@@ -5,6 +5,7 @@ import {v4 as uuidV4} from "uuid";
 import HttpError from "http-errors";
 import _ from "lodash";
 import Joi from "joi";
+import slug from "slug";
 
 export default class NewsController {
     static getNews = async (req, res, next) => {
@@ -36,17 +37,17 @@ export default class NewsController {
 
     static getSingleNews = async (req, res, next) => {
         try {
-            const {id} = req.params;
+            const {slugName} = req.params;
 
             const validate = Joi.object({
-                id: Joi.number().min(1).required(),
-            }).validate({id});
+                slugName: Joi.string().min(2).max(80).required(),
+            }).validate({slugName});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
             }
 
-            const singleNews = await News.findOne({where: {id}});
+            const singleNews = await News.findOne({where: {slugName}});
 
             res.json({
                 status: "ok",
@@ -63,8 +64,8 @@ export default class NewsController {
             const {title, description} = req.body;
 
             const validate = Joi.object({
-                title: Joi.string().min(2).max(75).required(),
-                description: Joi.string().min(2).required()
+                title: Joi.string().min(2).max(80).required(),
+                description: Joi.string().min(2).max(3000).required()
             }).validate({title, description});
 
             if (validate.error) {
@@ -76,11 +77,13 @@ export default class NewsController {
             }
 
             const filePath = path.join('files', uuidV4() + '-' + file.originalname);
+            const slugName = slug(title);
 
             fs.renameSync(file.path, News.getImgPath(filePath));
 
             const createdNews = await News.create({
                 imagePath: filePath,
+                slugName,
                 title,
                 description,
             });
@@ -100,14 +103,14 @@ export default class NewsController {
     static updateNews = async (req, res, next) => {
         try {
             const {file} = req;
-            const {id} = req.params;
+            const {slugName} = req.params;
             const {title, description} = req.body;
 
             const validate = Joi.object({
-                id: Joi.number().min(1).required(),
-                title: Joi.string().min(2).max(75).required(),
-                description: Joi.string().min(2).required(),
-            }).validate({id, title, description});
+                slugName: Joi.string().min(2).max(80).required(),
+                title: Joi.string().min(2).max(80).required(),
+                description: Joi.string().min(2).max(3000).required(),
+            }).validate({slugName, title, description});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
@@ -117,25 +120,26 @@ export default class NewsController {
                 throw HttpError(403, "Doesn't sent image!");
             }
 
+            const updatingNews = await News.findOne({where: {slugName}});
+
+            if (_.isEmpty(updatingNews)) {
+                throw HttpError(404, "Not found product from that slugName");
+            }
+
             const filePath = path.join('files', uuidV4() + '-' + file.originalname);
+            const updateImgPath = News.getImgPath(updatingNews.imagePath);
 
             fs.renameSync(file.path, News.getImgPath(filePath));
 
-            const updatingNews = await News.findOne({where: {id}});
+            if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath);
 
-            if (_.isEmpty(updatingNews)) {
-                throw HttpError(404, "Not found product from that id");
-            }
-
-            const updateImgPath = News.getImgPath(updatingNews.imagePath);
-
-            if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath)
-
+            const slugNameUpdate = slug(title);
             const updatedNews = await News.update({
                 imagePath: filePath,
+                slugName: slugNameUpdate,
                 title,
                 description,
-            }, {where: {id},});
+            }, {where: {slugName}});
 
             res.json({
                 status: "ok",
@@ -151,27 +155,26 @@ export default class NewsController {
 
     static deleteNews = async (req, res, next) => {
         try {
-            const {id} = req.params;
+            const {slugName} = req.params;
 
             const validate = Joi.object({
-                id: Joi.number().min(1).required(),
-            }).validate({id});
+                slugName: Joi.string().min(2).max(80).required(),
+            }).validate({slugName});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
             }
 
-            const deletingNews = await News.findOne({where: {id}});
+            const deletingNews = await News.findOne({where: {slugName}});
 
             if (_.isEmpty(deletingNews)) {
-                throw HttpError(404, "Not found product from that id");
+                throw HttpError(404, "Not found product from that slugName");
             }
 
             const delImgPath = News.getImgPath(deletingNews.imagePath);
+            const deletedNews = await News.destroy({where: {slugName}});
 
             if (fs.existsSync(delImgPath)) fs.unlinkSync(delImgPath)
-
-            const deletedNews = await News.destroy({where: {id}});
 
             res.json({
                 status: "ok",

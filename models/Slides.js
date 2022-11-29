@@ -14,11 +14,11 @@ Slides.init({
         allowNull: false
     },
     imagePath: {
-        type: DataTypes.TEXT(),
+        type: DataTypes.STRING(150),
         allowNull: false,
     },
     src: {
-        type: DataTypes.TEXT(),
+        type: DataTypes.STRING(150),
         allowNull: false,
     },
 }, {

@@ -38,7 +38,7 @@ export default class SlidesController {
 
             res.json({
                 status: "ok",
-                product: slide || {},
+                slide: slide || {},
             });
         } catch (e) {
             next(e);
@@ -91,7 +91,7 @@ export default class SlidesController {
 
             const validate = Joi.object({
                 id: Joi.number().min(1).required(),
-                src: Joi.string().min(1).required(),
+                src: Joi.string().min(1).max(150).required(),
             }).validate({id, src});
 
             if (validate.error) {
@@ -102,17 +102,16 @@ export default class SlidesController {
                 throw HttpError(403, "Doesn't sent image!");
             }
 
-            const filePath = path.join('files', uuidV4() + '-' + file.originalname);
-
-            fs.renameSync(file.path, Slides.getImgPath(filePath));
-
             const updatingSlide = await Slides.findOne({where: {id}});
 
             if(_.isEmpty(updatingSlide)){
                 throw HttpError(404, "Not found slide from that id!");
             }
 
+            const filePath = path.join('files', uuidV4() + '-' + file.originalname);
             const slideImgPath = Slides.getImgPath(updatingSlide.imagePath);
+
+            fs.renameSync(file.path, Slides.getImgPath(filePath));
 
             if (fs.existsSync(slideImgPath)) fs.unlinkSync(slideImgPath)
 

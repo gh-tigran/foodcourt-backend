@@ -14,13 +14,17 @@ MapImages.init({
         allowNull: false
     },
     name: {
-        type: DataTypes.TEXT(),
+        type: DataTypes.STRING(150),
         allowNull: false,
     },
     size: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.FLOAT,
         allowNull: false,
-    }
+    },
+    branchSlug: {
+        type: DataTypes.STRING(80),
+        allowNull: false,
+    },
 }, {
     sequelize,
     modelName: 'mapImages',

@@ -5,6 +5,7 @@ import {v4 as uuidV4} from "uuid";
 import HttpError from "http-errors";
 import _ from "lodash";
 import Joi from 'joi';
+import slug from "slug";
 
 export default class OffersController {
     static getOffers = async (req, res, next) => {
@@ -31,17 +32,17 @@ export default class OffersController {
 
     static getSingleOffer = async (req, res, next) => {
         try {
-            const {id} = req.params;
+            const {slugName} = req.params;
 
             const validate = Joi.object({
-                id: Joi.number().min(1).required(),
-            }).validate({id});
+                slugName: Joi.string().min(2).max(80).required(),
+            }).validate({slugName});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
             }
 
-            const offer = await Offers.findOne({where: {id}});
+            const offer = await Offers.findOne({where: {slugName}});
 
             res.json({
                 status: "ok",
@@ -58,8 +59,8 @@ export default class OffersController {
             const {title, description, price} = req.body;
 
             const validate = Joi.object({
-                title: Joi.string().min(2).max(75).required(),
-                description: Joi.string().min(2).max(200).required(),
+                title: Joi.string().min(2).max(80).required(),
+                description: Joi.string().min(2).max(3000).required(),
                 price: Joi.number().min(10).max(50000).required(),
             }).validate({title, description, price});
 
@@ -72,11 +73,13 @@ export default class OffersController {
             }
 
             const filePath = path.join('files', uuidV4() + '-' + file.originalname);
+            const slugName = slug(title);
 
             fs.renameSync(file.path, Offers.getImgPath(filePath));
 
             const createdOffer = await Offers.create({
                 imagePath: filePath,
+                slugName,
                 title,
                 description,
                 price,
@@ -97,15 +100,15 @@ export default class OffersController {
     static updateOffer = async (req, res, next) => {
         try {
             const {file} = req;
-            const {id} = req.params;
+            const {slugName} = req.params;
             const {title, description, price} = req.body;
 
             const validate = Joi.object({
-                id: Joi.number().min(1).required(),
-                title: Joi.string().min(2).max(75).required(),
-                description: Joi.string().min(2).max(200).required(),
+                slugName: Joi.string().min(2).max(80).required(),
+                title: Joi.string().min(2).max(80).required(),
+                description: Joi.string().min(2).max(3000).required(),
                 price: Joi.number().min(10).max(50000).required(),
-            }).validate({id, title, description, price});
+            }).validate({slugName, title, description, price});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
@@ -115,26 +118,27 @@ export default class OffersController {
                 throw HttpError(403, "Doesn't sent image!");
             }
 
+            const updatingOffer = await Offers.findOne({where: {slugName}});
+
+            if (_.isEmpty(updatingOffer)) {
+                throw HttpError(404, "Not found offer from that slugName");
+            }
+
+            const updateImgPath = Offers.getImgPath(updatingOffer.imagePath);
             const filePath = path.join('files', uuidV4() + '-' + file.originalname);
 
             fs.renameSync(file.path, Offers.getImgPath(filePath));
 
-            const updatingOffer = await Offers.findOne({where: {id}});
-
-            if (_.isEmpty(updatingOffer)) {
-                throw HttpError(404, "Not found offer from that id");
-            }
-
-            const updateImgPath = Offers.getImgPath(updatingOffer.imagePath);
-
             if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath);
 
+            const slugNameUpdate = slug(title);
             const updatedOffer = await Offers.update({
                 imagePath: filePath,
+                slugName: slugNameUpdate,
                 title,
                 description,
                 price,
-            }, {where: {id},});
+            }, {where: {slugName}});
 
             res.json({
                 status: "ok",
@@ -150,27 +154,27 @@ export default class OffersController {
 
     static deleteOffer = async (req, res, next) => {
         try {
-            const {id} = req.params;
+            const {slugName} = req.params;
 
             const validate = Joi.object({
-                id: Joi.number().min(1).required(),
-            }).validate({id});
+                slugName: Joi.string().min(2).max(80).required(),
+            }).validate({slugName});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
             }
 
-            const deletingOffer = await Offers.findOne({where: {id}});
+            const deletingOffer = await Offers.findOne({where: {slugName}});
 
             if(_.isEmpty(deletingOffer)){
-                throw HttpError(404, "Not found product from that id");
+                throw HttpError(404, "Not found product from that slugName");
             }
 
             const delImgPath = Offers.getImgPath(deletingOffer.imagePath);
 
             if (fs.existsSync(delImgPath)) fs.unlinkSync(delImgPath)
 
-            const deletedOffer = await Offers.destroy({where: {id}});
+            const deletedOffer = await Offers.destroy({where: {slugName}});
 
             res.json({
                 status: "ok",
