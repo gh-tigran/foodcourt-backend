@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import logger from "morgan";
 import indexRouter from "./routes/index";
 import headers from "./middlewares/headers";
+import authorization from "./middlewares/authorization";
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(headers);
+app.use(authorization);
 
 app.use('/', indexRouter);
 
@@ -24,10 +26,10 @@ app.use((req, res, next) => {
 app.use((err, req, res, next) => {
   res.status(err.status || 500);
   res.json({
-    errors: err.errors,
     status: 'error',
     message: err.message,
     stack: err.stack,
+    errors: err.errors,
   });
 });
 

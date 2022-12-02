@@ -5,9 +5,11 @@ import categories from "./categories";
 import products from "./products";
 import news from "./news";
 import map from "./map";
+import users from "./users";
 
 const router = express.Router();
 
+router.use('/users', users);
 router.use('/slides', slides);
 router.use('/offers', offers);
 router.use('/categories', categories);

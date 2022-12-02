@@ -21,11 +21,11 @@ Map.init({
         type: DataTypes.DOUBLE,
         allowNull: false,
     },
-    // fullCoords:{
-    //     type: DataTypes.TEXT(),
-    //     allowNull: false,
-    //     //unique: "fullCoords"
-    // },
+    fullCoords:{
+        type: DataTypes.STRING(30),
+        allowNull: false,
+        unique: "fullCoords"
+    },
     title: {
         type: DataTypes.STRING(80),
         allowNull: false,
@@ -37,6 +37,7 @@ Map.init({
     slugName: {
         type: DataTypes.STRING(80),
         allowNull: false,
+        unique: 'slugName',
     },
 }, {
     sequelize,

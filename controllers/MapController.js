@@ -84,7 +84,7 @@ export default class MapController {
             }
 
             const slugName = slug(title);
-            const createdBranch = await Map.create({lat, lon, title, slugName, location, /*fullCoords: `${x}${y}`*/});
+            const createdBranch = await Map.create({lat, lon, title, slugName, location, fullCoords: `${lat}${lon}`});
 
             const filesData = files.map(file => {
                 if (['image/png', 'image/jpeg'].includes(file.mimetype)) {

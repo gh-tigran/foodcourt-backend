@@ -28,6 +28,7 @@ News.init({
     slugName: {
         type: DataTypes.STRING(80),
         allowNull: false,
+        unique: 'slugName',
     },
 }, {
     sequelize,
