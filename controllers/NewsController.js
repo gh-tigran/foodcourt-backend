@@ -5,7 +5,6 @@ import {v4 as uuidV4} from "uuid";
 import HttpError from "http-errors";
 import _ from "lodash";
 import Joi from "joi";
-import slug from "slug";
 
 export default class NewsController {
     static getNews = async (req, res, next) => {
@@ -77,7 +76,7 @@ export default class NewsController {
             }
 
             const filePath = path.join('files', uuidV4() + '-' + file.originalname);
-            const slugName = slug(title);
+            const slugName = await News.generateSlug(title);
 
             fs.renameSync(file.path, News.getImgPath(filePath));
 
@@ -108,35 +107,38 @@ export default class NewsController {
 
             const validate = Joi.object({
                 slugName: Joi.string().min(2).max(80).required(),
-                title: Joi.string().min(2).max(80).required(),
-                description: Joi.string().min(2).max(3000).required(),
+                title: Joi.string().min(2).max(80),
+                description: Joi.string().min(2).max(3000),
             }).validate({slugName, title, description});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
             }
 
-            if(_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)){
-                throw HttpError(403, "Doesn't sent image!");
-            }
-
             const updatingNews = await News.findOne({where: {slugName}});
+            let slugNameUpdate = '';
+            let filePath = '';
 
             if (_.isEmpty(updatingNews)) {
                 throw HttpError(404, "Not found product from that slugName");
             }
 
-            const filePath = path.join('files', uuidV4() + '-' + file.originalname);
-            const updateImgPath = News.getImgPath(updatingNews.imagePath);
+            if(title && title !== updatingNews.title){
+                slugNameUpdate = await News.generateSlug(title);
+            }
 
-            fs.renameSync(file.path, News.getImgPath(filePath));
+            if(!_.isEmpty(file) && ['image/png', 'image/jpeg'].includes(file.mimetype)){
+                filePath = path.join('files', uuidV4() + '-' + file.originalname);
+                const updateImgPath = News.getImgPath(updatingNews.imagePath);
 
-            if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath);
+                fs.renameSync(file.path, News.getImgPath(filePath));
 
-            const slugNameUpdate = slug(title);
+                if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath);
+            }
+
             const updatedNews = await News.update({
-                imagePath: filePath,
-                slugName: slugNameUpdate,
+                imagePath: filePath || updatingNews.imagePath,
+                slugName: slugNameUpdate || slugName,
                 title,
                 description,
             }, {where: {slugName}});
@@ -184,4 +186,57 @@ export default class NewsController {
             next(e);
         }
     };
+
+    // static updateNews = async (req, res, next) => {
+    //     try {
+    //         const {file} = req;
+    //         const {slugName} = req.params;
+    //         const {title, description} = req.body;
+    //
+    //         const validate = Joi.object({
+    //             slugName: Joi.string().min(2).max(80).required(),
+    //             title: Joi.string().min(2).max(80).required(),
+    //             description: Joi.string().min(2).max(3000).required(),
+    //         }).validate({slugName, title, description});
+    //
+    //         if (validate.error) {
+    //             throw HttpError(403, validate.error);
+    //         }
+    //
+    //         if(_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)){
+    //             throw HttpError(403, "Doesn't sent image!");
+    //         }
+    //
+    //         const updatingNews = await News.findOne({where: {slugName}});
+    //
+    //         if (_.isEmpty(updatingNews)) {
+    //             throw HttpError(404, "Not found product from that slugName");
+    //         }
+    //
+    //         const filePath = path.join('files', uuidV4() + '-' + file.originalname);
+    //         const updateImgPath = News.getImgPath(updatingNews.imagePath);
+    //
+    //         fs.renameSync(file.path, News.getImgPath(filePath));
+    //
+    //         if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath);
+    //
+    //         const slugNameUpdate = await News.generateSlug(title);
+    //         const updatedNews = await News.update({
+    //             imagePath: filePath,
+    //             slugName: slugNameUpdate,
+    //             title,
+    //             description,
+    //         }, {where: {slugName}});
+    //
+    //         res.json({
+    //             status: "ok",
+    //             updatedNews
+    //         })
+    //     } catch (e) {
+    //         if (!_.isEmpty(req.file) && fs.existsSync(req.file.path)) {
+    //             fs.unlinkSync(req.file.path);
+    //         }
+    //         next(e);
+    //     }
+    // }
 }

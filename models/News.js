@@ -1,9 +1,22 @@
 import {DataTypes, Model} from "sequelize";
 import sequelize from "../services/sequelize";
 import path from "path";
+import slug from "slug";
 
 class News extends Model {
     static getImgPath = (filePath) => path.join(__dirname, '../public/', filePath);
+
+    static generateSlug = async (title) => {
+        let slugName = slug(title);
+
+        const sameSlugNameNews = await News.findAll({where: {slugName}});
+
+        if(sameSlugNameNews.length){
+            slugName = slugName + '-' + sameSlugNameNews.length;
+        }
+
+        return slugName;
+    }
 }
 
 News.init({

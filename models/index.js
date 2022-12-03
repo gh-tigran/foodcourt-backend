@@ -1,3 +1,4 @@
+export {default as Admin} from "./Admin";
 export {default as Users} from "./Users";
 export {default as Slides} from "./Slides";
 export {default as Offers} from "./Offers";

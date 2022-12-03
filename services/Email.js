@@ -2,7 +2,7 @@ import nodemailer from "nodemailer";
 
 const transporter = nodemailer.createTransport({
   secure: true,
-  host: "smtp.mail.ru",//todo modify for gmail requests
+  host: "smtp.mail.ru",
   port: 465,
   auth: {
     user: 'armmmartirosyann@mail.ru',

@@ -1,9 +1,22 @@
 import {DataTypes, Model} from "sequelize";
 import sequelize from "../services/sequelize";
 import path from "path";
+import slug from "slug";
 
 class Map extends Model {
     static getImgPath = (filePath) => path.join(__dirname, '../public/', filePath);
+
+    static generateSlug = async (title) => {
+        let slugName = slug(title);
+
+        const sameSlugNameMaps = await Map.findAll({where: {slugName}});
+
+        if(sameSlugNameMaps.length){
+            slugName = slugName + '-' + sameSlugNameMaps.length;
+        }
+
+        return slugName;
+    }
 }
 
 Map.init({
@@ -13,18 +26,13 @@ Map.init({
         autoIncrement: true,
         allowNull: false
     },
-    lat:{
+    lat:{//todo change lat, lon fields type(geometry/point)
         type: DataTypes.DOUBLE,
         allowNull: false,
     },
     lon:{
         type: DataTypes.DOUBLE,
         allowNull: false,
-    },
-    fullCoords:{
-        type: DataTypes.STRING(30),
-        allowNull: false,
-        unique: "fullCoords"
     },
     title: {
         type: DataTypes.STRING(80),

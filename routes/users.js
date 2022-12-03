@@ -6,9 +6,9 @@ router.post('/register', UserController.register);
 
 router.post('/login', UserController.login);
 
-router.post('/modifyAccount', UserController.modifyAccount);
+router.post('/modify-account', UserController.modifyAccount);
 
-router.post('/deleteAccount', UserController.deleteAccount);
+router.post('/delete-account', UserController.deleteAccount);
 
 router.get('/list', UserController.list);
 

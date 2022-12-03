@@ -1,9 +1,22 @@
 import {DataTypes, Model} from "sequelize";
 import sequelize from "../services/sequelize";
 import path from "path";
+import slug from "slug";
 
 class Offers extends Model {
     static getImgPath = (filePath) => path.join(__dirname, '../public/', filePath);
+
+    static generateSlug = async (title) => {
+        let slugName = slug(title);
+
+        const sameSlugNameOffers = await Offers.findAll({where: {slugName}});
+
+        if(sameSlugNameOffers.length){
+            slugName = slugName + '-' + sameSlugNameOffers.length;
+        }
+
+        return slugName;
+    }
 }
 
 Offers.init({

@@ -2,16 +2,31 @@ import jwt from "jsonwebtoken";
 import HttpError from "http-errors";
 
 const {JWT_SECRET} = process.env;
+
+const reg1 = /^\/users\/modify-account.*$/;
+const reg2 = /^\/users\/delete-account.*$/;
+const reg3 = /^\/users\/list.*$/;
+const reg4 = /^\/users\/single\/.*$/;
+
 const INCLUDE = [
-    '/users/modifyAccount',
-    '/users/deleteAccount',
+    reg1,
+    reg2,
+    reg3,
+    reg4,
 ];
 
 export default function authorization(req, res, next) {
     try {
         const {path, method} = req;
+        let isAllowForUser = true;
 
-        if (method === 'OPTIONS' || !INCLUDE.includes(path)) {
+        INCLUDE.forEach(regexp => {
+            if(regexp.test(path)){
+                isAllowForUser = false;
+            }
+        });
+
+        if (isAllowForUser) {
             next();
             return;
         }
@@ -28,7 +43,7 @@ export default function authorization(req, res, next) {
         }
 
         if (!userId) {
-            throw HttpError(401, 'Invalid token')
+            throw HttpError(401, 'Invalid token, authorization',)
         }
 
         req.userId = userId;

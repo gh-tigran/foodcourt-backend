@@ -5,7 +5,6 @@ import {v4 as uuidV4} from "uuid";
 import HttpError from "http-errors";
 import _ from "lodash";
 import Joi from 'joi';
-import slug from "slug";
 
 export default class OffersController {
     static getOffers = async (req, res, next) => {
@@ -73,7 +72,7 @@ export default class OffersController {
             }
 
             const filePath = path.join('files', uuidV4() + '-' + file.originalname);
-            const slugName = slug(title);
+            const slugName = await Offers.generateSlug(title);
 
             fs.renameSync(file.path, Offers.getImgPath(filePath));
 
@@ -105,36 +104,39 @@ export default class OffersController {
 
             const validate = Joi.object({
                 slugName: Joi.string().min(2).max(80).required(),
-                title: Joi.string().min(2).max(80).required(),
-                description: Joi.string().min(2).max(3000).required(),
-                price: Joi.number().min(10).max(50000).required(),
+                title: Joi.string().min(2).max(80),
+                description: Joi.string().min(2).max(3000),
+                price: Joi.number().min(10).max(50000),
             }).validate({slugName, title, description, price});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
             }
 
-            if(_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)){
-                throw HttpError(403, "Doesn't sent image!");
-            }
-
             const updatingOffer = await Offers.findOne({where: {slugName}});
+            let slugNameUpdate = '';
+            let filePath = '';
 
             if (_.isEmpty(updatingOffer)) {
                 throw HttpError(404, "Not found offer from that slugName");
             }
 
-            const updateImgPath = Offers.getImgPath(updatingOffer.imagePath);
-            const filePath = path.join('files', uuidV4() + '-' + file.originalname);
+            if(title && title !== updatingOffer.title){
+                slugNameUpdate = await Offers.generateSlug(title);
+            }
 
-            fs.renameSync(file.path, Offers.getImgPath(filePath));
+            if(!_.isEmpty(file) && ['image/png', 'image/jpeg'].includes(file.mimetype)){
+                const updateImgPath = Offers.getImgPath(updatingOffer.imagePath);
+                filePath = path.join('files', uuidV4() + '-' + file.originalname);
 
-            if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath);
+                fs.renameSync(file.path, Offers.getImgPath(filePath));
 
-            const slugNameUpdate = slug(title);
+                if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath);
+            }
+
             const updatedOffer = await Offers.update({
-                imagePath: filePath,
-                slugName: slugNameUpdate,
+                imagePath: filePath || updatingOffer.imagePath,
+                slugName: slugNameUpdate || slugName,
                 title,
                 description,
                 price,
@@ -184,4 +186,60 @@ export default class OffersController {
             next(e);
         }
     };
+
+    // static updateOffer = async (req, res, next) => {
+    //     try {
+    //         const {file} = req;
+    //         const {slugName} = req.params;
+    //         const {title, description, price} = req.body;
+    //
+    //         const validate = Joi.object({
+    //             slugName: Joi.string().min(2).max(80).required(),
+    //             title: Joi.string().min(2).max(80).required(),
+    //             description: Joi.string().min(2).max(3000).required(),
+    //             price: Joi.number().min(10).max(50000).required(),
+    //         }).validate({slugName, title, description, price});
+    //
+    //         if (validate.error) {
+    //             throw HttpError(403, validate.error);
+    //         }
+    //
+    //         if(_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)){
+    //             throw HttpError(403, "Doesn't sent image!");
+    //         }
+    //
+    //         const updatingOffer = await Offers.findOne({where: {slugName}});
+    //
+    //         if (_.isEmpty(updatingOffer)) {
+    //             throw HttpError(404, "Not found offer from that slugName");
+    //         }
+    //
+    //         const updateImgPath = Offers.getImgPath(updatingOffer.imagePath);
+    //         const filePath = path.join('files', uuidV4() + '-' + file.originalname);
+    //
+    //         fs.renameSync(file.path, Offers.getImgPath(filePath));
+    //
+    //         if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath);
+    //
+    //         const slugNameUpdate = await Offers.generateSlug(title);
+    //
+    //         const updatedOffer = await Offers.update({
+    //             imagePath: filePath,
+    //             slugName: slugNameUpdate,
+    //             title,
+    //             description,
+    //             price,
+    //         }, {where: {slugName}});
+    //
+    //         res.json({
+    //             status: "ok",
+    //             updatedOffer
+    //         })
+    //     } catch (e) {
+    //         if (!_.isEmpty(req.file) && fs.existsSync(req.file.path)) {
+    //             fs.unlinkSync(req.file.path);
+    //         }
+    //         next(e);
+    //     }
+    // }
 }

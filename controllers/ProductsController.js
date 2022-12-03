@@ -5,7 +5,6 @@ import {v4 as uuidV4} from "uuid";
 import HttpError from "http-errors";
 import _ from "lodash";
 import Joi from "joi";
-import slug from "slug";
 
 export default class ProductsController {
     static getProducts = async (req, res, next) => {
@@ -136,7 +135,6 @@ export default class ProductsController {
         try {
             const {file} = req;
             const {title, description, price, categorySlug} = req.body;
-            const slugName = slug(title);
 
             const validate = Joi.object({
                 title: Joi.string().min(2).max(80).required(),
@@ -162,6 +160,8 @@ export default class ProductsController {
             const filePath = path.join('files', uuidV4() + '-' + file.originalname);
 
             fs.renameSync(file.path, Products.getImgPath(filePath));
+
+            const slugName = await Products.generateSlug(title);
 
             const createdProduct = await Products.create({
                 imagePath: filePath,
@@ -190,48 +190,54 @@ export default class ProductsController {
             const {file} = req;
             const {slugName} = req.params;
             const {title, description, price, categorySlug} = req.body;
-            const slugNameUpdate = slug(title);
 
             const validate = Joi.object({
                 slugName: Joi.string().min(2).max(80).required(),
-                title: Joi.string().min(2).max(80).required(),
-                description: Joi.string().min(2).max(3000).required(),
-                price: Joi.number().min(10).max(50000).required(),
-                categorySlug: Joi.string().min(2).max(80).required(),
+                title: Joi.string().min(2).max(80),
+                description: Joi.string().min(2).max(3000),
+                price: Joi.number().min(10).max(50000),
+                categorySlug: Joi.string().min(2).max(80),
             }).validate({slugName, title, description, price, categorySlug});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
             }
 
-            const category = await Categories.findOne({where: {slugName: categorySlug}});
-
-            if (_.isEmpty(category)) {
-                throw HttpError(403, "Category from that slug doesn't exist");
-            }
-
-            if(_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)){
-                throw HttpError(403, "Doesn't sent image!");
-            }
-
             const updatingProduct = await Products.findOne({where: {slugName}});
+            let slugNameUpdate = '';
+            let filePath = '';
+            let category = {};
 
             if (_.isEmpty(updatingProduct)) {
                 throw HttpError(404, "Not found product from that slagName");
             }
 
-            const filePath = path.join('files', uuidV4() + '-' + file.originalname);
+            if(categorySlug){
+                category = await Categories.findOne({where: {slugName: categorySlug}});
 
-            fs.renameSync(file.path, Products.getImgPath(filePath));
+                if (_.isEmpty(category)) {
+                    throw HttpError(403, "Category from that slug doesn't exist");
+                }
+            }
 
-            const updateImgPath = Products.getImgPath(updatingProduct.imagePath);
+            if(title && title !== updatingProduct.title){
+                slugNameUpdate = await Products.generateSlug(title);
+            }
 
-            if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath)
+            if(!_.isEmpty(file) && ['image/png', 'image/jpeg'].includes(file.mimetype)){
+                filePath = path.join('files', uuidV4() + '-' + file.originalname);
+
+                fs.renameSync(file.path, Products.getImgPath(filePath));
+
+                const updateImgPath = Products.getImgPath(updatingProduct.imagePath);
+
+                if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath)
+            }
 
             const updatedProduct = await Products.update({
-                imagePath: filePath,
-                slugName: slugNameUpdate,
-                categoryId: category.id,
+                imagePath: filePath || updatingProduct.imagePath,
+                slugName: slugNameUpdate || slugName,
+                categoryId: category.id || updatingProduct.categoryId,
                 title,
                 description,
                 price,
@@ -282,4 +288,71 @@ export default class ProductsController {
             next(e);
         }
     };
+
+    // static updateProduct = async (req, res, next) => {
+    //     try {
+    //         const {file} = req;
+    //         const {slugName} = req.params;
+    //         const {title, description, price, categorySlug} = req.body;
+    //
+    //
+    //         const validate = Joi.object({
+    //             slugName: Joi.string().min(2).max(80).required(),
+    //             title: Joi.string().min(2).max(80).required(),
+    //             description: Joi.string().min(2).max(3000).required(),
+    //             price: Joi.number().min(10).max(50000).required(),
+    //             categorySlug: Joi.string().min(2).max(80).required(),
+    //         }).validate({slugName, title, description, price, categorySlug});
+    //
+    //         if (validate.error) {
+    //             throw HttpError(403, validate.error);
+    //         }
+    //
+    //         const category = await Categories.findOne({where: {slugName: categorySlug}});
+    //
+    //         if (_.isEmpty(category)) {
+    //             throw HttpError(403, "Category from that slug doesn't exist");
+    //         }
+    //
+    //         if(_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)){
+    //             throw HttpError(403, "Doesn't sent image!");
+    //         }
+    //
+    //         const updatingProduct = await Products.findOne({where: {slugName}});
+    //
+    //         if (_.isEmpty(updatingProduct)) {
+    //             throw HttpError(404, "Not found product from that slagName");
+    //         }
+    //
+    //         const filePath = path.join('files', uuidV4() + '-' + file.originalname);
+    //
+    //         fs.renameSync(file.path, Products.getImgPath(filePath));
+    //
+    //         const updateImgPath = Products.getImgPath(updatingProduct.imagePath);
+    //
+    //         if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath)
+    //
+    //         const slugNameUpdate = await Products.generateSlug(title);
+    //
+    //         const updatedProduct = await Products.update({
+    //             imagePath: filePath,
+    //             slugName: slugNameUpdate,
+    //             categoryId: category.id,
+    //             title,
+    //             description,
+    //             price,
+    //             categorySlug
+    //         }, {where: {slugName},});
+    //
+    //         res.json({
+    //             status: "ok",
+    //             updatedProduct
+    //         })
+    //     } catch (e) {
+    //         if (!_.isEmpty(req.file) && fs.existsSync(req.file.path)) {
+    //             fs.unlinkSync(req.file.path);
+    //         }
+    //         next(e);
+    //     }
+    // }
 }

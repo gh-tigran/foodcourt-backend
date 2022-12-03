@@ -2,6 +2,7 @@ import {DataTypes, Model} from "sequelize";
 import sequelize from "../services/sequelize";
 import Categories from "./Categories";
 import path from "path";
+import slug from "slug";
 
 class Products extends Model {
     static getImgPath = (filePath) => path.join(__dirname, '../public/', filePath);
@@ -12,6 +13,18 @@ class Products extends Model {
         {orderBy: 'price', type: 'ASC', desc: 'cheap-expensive'},
         {orderBy: 'price', type: 'DESC', desc: 'expensive-cheap'},
     ];
+
+    static generateSlug = async (title) => {
+        let slugName = slug(title);
+
+        const sameSlugNameOffers = await Products.findAll({where: {slugName}});
+
+        if(sameSlugNameOffers.length){
+            slugName = slugName + '-' + sameSlugNameOffers.length;
+        }
+
+        return slugName;
+    }
 }
 
 Products.init({

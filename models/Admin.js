@@ -4,30 +4,15 @@ import md5 from "md5";
 
 const {PASSWORD_SECRET} = process.env;
 
-class Users extends Model {
+class Admin extends Model {
     static passwordHash = (val) => md5(md5(val) + PASSWORD_SECRET);
-
-    static activate = async (email) => {
-        await Users.update({
-            status: 'active',
-            confirmToken: null,
-        }, {where: {email, status: 'pending'}});
-    };
 }
 
-Users.init({
+Admin.init({
     id: {
         type: DataTypes.BIGINT.UNSIGNED,
         primaryKey: true,
         autoIncrement: true,
-        allowNull: false
-    },
-    firstName: {
-        type: DataTypes.STRING(80),
-        allowNull: false
-    },
-    lastName: {
-        type: DataTypes.STRING(80),
         allowNull: false
     },
     email: {
@@ -38,15 +23,6 @@ Users.init({
     phoneNum: {
         type: DataTypes.STRING(25),
         allowNull: false,
-    },
-    status: {
-        type: DataTypes.ENUM('active', 'pending', 'deleted'),
-        allowNull: false,
-        defaultValue: 'pending'
-    },
-    confirmToken: {
-        type: DataTypes.STRING(80),
-        allowNull: true
     },
     password: {
         type: DataTypes.CHAR(32),
@@ -62,8 +38,8 @@ Users.init({
     }
 }, {
     sequelize,
-    modelName: 'users',
-    tableName: 'users'
+    modelName: 'admin',
+    tableName: 'admin'
 });
 
-export default Users;
+export default Admin;

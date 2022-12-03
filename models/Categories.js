@@ -1,9 +1,22 @@
 import {DataTypes, Model} from "sequelize";
 import sequelize from "../services/sequelize";
 import path from "path";
+import slug from "slug";
 
 class Categories extends Model {
     static getImgPath = (filePath) => path.join(__dirname, '../public/', filePath);
+
+    static generateSlug = async (name) => {
+        let slugName = slug(name);
+
+        const sameSlugNameCategories = await Categories.findAll({where: {slugName}});
+
+        if(sameSlugNameCategories.length){
+            slugName = slugName + '-' + sameSlugNameCategories.length;
+        }
+
+        return slugName;
+    };
 }
 
 Categories.init({

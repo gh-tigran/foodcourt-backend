@@ -16,7 +16,7 @@ class UserController {
                 firstName: Joi.string().min(2).max(80).required(),
                 lastName: Joi.string().min(2).max(80).required(),
                 email: Joi.string().min(2).max(50).required(),
-                phoneNum: Joi.number().min(8).required(),
+                phoneNum: Joi.number().min(1).required(),
                 password: Joi.string().min(8).max(50).required(),
             }).validate({firstName, lastName, email, phoneNum, password});
 
@@ -90,7 +90,18 @@ class UserController {
             const {userId} = req;
 
             if(!userId){
-                throw HttpError(403, {message: 'not registered'});
+                throw HttpError(403, {message: 'not registered, controller'});
+            }
+
+            const validate = Joi.object({
+                firstName: Joi.string().min(2).max(80),
+                lastName: Joi.string().min(2).max(80),
+                phoneNum: Joi.number().min(1),
+                password: Joi.string().min(8).max(50),
+            }).validate({firstName, lastName, phoneNum, password});
+
+            if (validate.error) {
+                throw HttpError(403, validate.error);
             }
 
             const updatedAccount = await Users.update({
@@ -151,7 +162,7 @@ class UserController {
         }
     }
 
-    static list = async (req, res, next) => {
+    static list = async (req, res, next) => {//todo modify(only admin will get all users list)
         try {
             const {search} = req.query;
             const where = {};
@@ -191,7 +202,7 @@ class UserController {
 
             res.json({
                 status: 'ok',
-                user
+                user: user || {}
             });
         } catch (e) {
             next(e);
