@@ -6,13 +6,13 @@ router.post('/register', UserController.register);
 
 router.post('/login', UserController.login);
 
-router.post('/modify-account', UserController.modifyAccount);
-
-router.post('/delete-account', UserController.deleteAccount);
-
-router.get('/list', UserController.list);
-
-router.get('/single/:id', UserController.single);
-
 router.get('/confirm', UserController.confirm);
+
+router.put('/', UserController.modifyAccount);
+
+router.delete('/', UserController.deleteAccount);
+
+router.get('/', UserController.list);
+
+router.get('/:id', UserController.single);
 export default router;

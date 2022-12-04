@@ -135,6 +135,11 @@ export default class ProductsController {
         try {
             const {file} = req;
             const {title, description, price, categorySlug} = req.body;
+            const {adminId} = req;
+
+            if(!adminId){
+                throw HttpError(403, {message: 'not registered as admin'});
+            }
 
             const validate = Joi.object({
                 title: Joi.string().min(2).max(80).required(),
@@ -190,6 +195,11 @@ export default class ProductsController {
             const {file} = req;
             const {slugName} = req.params;
             const {title, description, price, categorySlug} = req.body;
+            const {adminId} = req;
+
+            if(!adminId){
+                throw HttpError(403, {message: 'not registered as admin'});
+            }
 
             const validate = Joi.object({
                 slugName: Joi.string().min(2).max(80).required(),
@@ -259,6 +269,11 @@ export default class ProductsController {
     static deleteProduct = async (req, res, next) => {
         try {
             const {slugName} = req.params;
+            const {adminId} = req;
+
+            if(!adminId){
+                throw HttpError(403, {message: 'not registered as admin'});
+            }
 
             const validate = Joi.object({
                 slugName: Joi.string().min(2).max(80).required(),

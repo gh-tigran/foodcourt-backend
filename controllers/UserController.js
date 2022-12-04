@@ -90,7 +90,7 @@ class UserController {
             const {userId} = req;
 
             if(!userId){
-                throw HttpError(403, {message: 'not registered, controller'});
+                throw HttpError(403, {message: 'not registered'});
             }
 
             const validate = Joi.object({
@@ -146,7 +146,7 @@ class UserController {
             const user = await Users.findOne({
                 where: {email, status: 'pending'}
             });
-
+            console.log(user, 'user');
             if (user.confirmToken !== token) {
                 throw HttpError(403);
             }
@@ -162,10 +162,15 @@ class UserController {
         }
     }
 
-    static list = async (req, res, next) => {//todo modify(only admin will get all users list)
+    static list = async (req, res, next) => {
         try {
             const {search} = req.query;
             const where = {};
+            const {adminId} = req;
+
+            if(!adminId){
+                throw HttpError(403, {message: 'not registered as admin'});
+            }
 
             if (search) {
                 where.$or = [{
@@ -193,6 +198,11 @@ class UserController {
     static single = async (req, res, next) => {
         try {
             const {id} = req.params;
+            const {adminId, userId} = req;
+
+            if(!adminId && !userId){
+                throw HttpError(403, {message: 'not registered'});
+            }
 
             if (!id) {
                 throw HttpError(404);

@@ -60,6 +60,11 @@ export default class MapController {
         try {
             const {files} = req;
             const {lat, lon, title, location} = req.body;
+            const {adminId} = req;
+
+            if(!adminId){
+                throw HttpError(403, {message: 'not registered as admin'});
+            }
 
             const validate = Joi.object({
                 lat: Joi.number().required(),
@@ -126,6 +131,11 @@ export default class MapController {
             const {files} = req;
             const {slugName} = req.params;
             const {lat, lon, title, location} = req.body;
+            const {adminId} = req;
+
+            if(!adminId){
+                throw HttpError(403, {message: 'not registered as admin'});
+            }
 
             const validate = Joi.object({
                 slugName: Joi.string().min(2).max(80).required(),
@@ -237,6 +247,11 @@ export default class MapController {
     static deleteBranch = async (req, res, next) => {
         try {
             const {slugName} = req.params;
+            const {adminId} = req;
+
+            if(!adminId){
+                throw HttpError(403, {message: 'not registered as admin'});
+            }
 
             const validate = Joi.object({
                 slugName: Joi.string().min(2).max(80).required(),

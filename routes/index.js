@@ -6,9 +6,11 @@ import products from "./products";
 import news from "./news";
 import map from "./map";
 import users from "./users";
+import admin from "./admin";
 
 const router = express.Router();
 
+router.use('/admin', admin);
 router.use('/users', users);
 router.use('/slides', slides);
 router.use('/offers', offers);

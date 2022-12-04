@@ -49,6 +49,11 @@ export default class SlidesController {
         try {
             const {file} = req;
             const {src} = req.body;
+            const {adminId} = req;
+
+            if(!adminId){
+                throw HttpError(403, {message: 'not registered as admin'});
+            }
 
             const validate = Joi.object({
                 src: Joi.string().min(1).required(),
@@ -88,6 +93,11 @@ export default class SlidesController {
             const {file} = req;
             const {id} = req.params;
             const {src} = req.body;
+            const {adminId} = req;
+
+            if(!adminId){
+                throw HttpError(403, {message: 'not registered as admin'});
+            }
 
             const validate = Joi.object({
                 id: Joi.number().min(1).required(),
@@ -134,6 +144,11 @@ export default class SlidesController {
     static deleteSlide = async (req, res, next) => {
         try {
             const {id} = req.params;
+            const {adminId} = req;
+
+            if(!adminId){
+                throw HttpError(403, {message: 'not registered as admin'});
+            }
 
             const validate = Joi.object({
                 id: Joi.number().min(1).required(),
