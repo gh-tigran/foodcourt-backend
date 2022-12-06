@@ -59,7 +59,7 @@ export default class OffersController {
             const {adminId} = req;
 
             if(!adminId){
-                throw HttpError(403, {message: 'not registered as admin'});
+                throw HttpError(403, 'not registered as admin');
             }
 
             const validate = Joi.object({
@@ -109,7 +109,7 @@ export default class OffersController {
             const {adminId} = req;
 
             if(!adminId){
-                throw HttpError(403, {message: 'not registered as admin'});
+                throw HttpError(403, 'not registered as admin');
             }
 
             const validate = Joi.object({
@@ -170,7 +170,7 @@ export default class OffersController {
             const {adminId} = req;
 
             if(!adminId){
-                throw HttpError(403, {message: 'not registered as admin'});
+                throw HttpError(403, 'not registered as admin');
             }
 
             const validate = Joi.object({

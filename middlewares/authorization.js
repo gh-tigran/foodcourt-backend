@@ -21,7 +21,7 @@ const includeForUser = [
     {path: /^\/users\/register\/?$/, method: 'POST'},
     {path: /^\/users\/login\/?$/, method: 'POST'},
     {path: /^\/users(\/.*)?$/, method: 'PUT'},
-    {path: /^\/users(\/.*)$/, method: 'DELETE'},
+    {path: /^\/users(\/.*)?$/, method: 'DELETE'},
     {path: /^\/users\/[0-9]+$/, method: 'GET'},
     {path: /^\/users\/confirm\/?$/, method: 'GET'},
     {path: /^\/slides(\/.*)?$/, method: 'GET'},
@@ -34,7 +34,7 @@ const includeForUser = [
 
 const excludeForAdmin = [
     {path: /^\/users(\/.*)?$/, method: 'PUT'},
-    {path: /^\/users(\/.*)$/, method: 'DELETE'},
+    {path: /^\/users(\/.*)?$/, method: 'DELETE'},
 ];
 
 export default function authorization(req, res, next) {
@@ -52,40 +52,40 @@ export default function authorization(req, res, next) {
         } catch (e) {}
 
         if (userId) {
-            let allowedPathForUser = includeForUser.find((reg) => {
-                return reg.path.test(path) && method === reg.method;
-            });
-
-            if(_.isEmpty(allowedPathForUser)){
-                throw HttpError(403);
-            }
+            // let allowedPathForUser = includeForUser.find((reg) => {
+            //     return reg.path.test(path) && method === reg.method;
+            // });
+            //
+            // if(_.isEmpty(allowedPathForUser)){
+            //     throw HttpError(403, 'Not allowed for you');
+            // }
 
             req.userId = userId;
-            next();
-            return;
+            // next();
+            // return;
         }
 
         if(adminId){
-            let notAllowedPathForAdmin = excludeForAdmin.find((reg) => {
-                return reg.path.test(path) && method === reg.method;
-            });
-
-            if(!_.isEmpty(notAllowedPathForAdmin)){
-                throw HttpError(403);
-            }
+            // let notAllowedPathForAdmin = excludeForAdmin.find((reg) => {
+            //     return reg.path.test(path) && method === reg.method;
+            // });
+            //
+            // if(!_.isEmpty(notAllowedPathForAdmin)){
+            //     throw HttpError(403, 'not allowed for admin');
+            // }
 
             req.adminId = adminId;
-            next();
-            return;
+            // next();
+            // return;
         }
 
-        let allowedPathForDefault = includeForDefault.find((reg) => {
-            return reg.path.test(path) && method === reg.method;
-        });
-
-        if(_.isEmpty(allowedPathForDefault)){
-            throw HttpError(403);
-        }
+        // let allowedPathForDefault = includeForDefault.find((reg) => {
+        //     return reg.path.test(path) && method === reg.method;
+        // });
+        //
+        // if(_.isEmpty(allowedPathForDefault)){
+        //     throw HttpError(403, 'Not allowed for you');
+        // }
 
         next();
     } catch (e) {

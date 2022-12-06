@@ -27,7 +27,7 @@ class UserController {
             const existsUser = await Users.findOne({ where: {email} });
 
             if (existsUser) {
-                throw HttpError(403, {email: `Email already registered`});
+                throw HttpError(403, `Email already registered`);
             }
 
             const confirmToken = uuidV4();
@@ -62,10 +62,19 @@ class UserController {
         try {
             const {email, password} = req.body;
 
+            const validate = Joi.object({
+                email: Joi.string().min(2).max(50).required(),
+                password: Joi.string().min(8).max(50).required(),
+            }).validate({email, password});
+
+            if (validate.error) {
+                throw HttpError(403, validate.error);
+            }
+
             const user = await Users.findOne({ where: {email} });
 
             if (!user || user.getDataValue('password') !== Users.passwordHash(password)) {
-                throw HttpError(403);
+                throw HttpError(403, 'Wrong email or password');
             }
 
             if(user.status !== 'active'){
@@ -90,7 +99,7 @@ class UserController {
             const {userId} = req;
 
             if(!userId){
-                throw HttpError(403, {message: 'not registered'});
+                throw HttpError(403, 'not registered');
             }
 
             const validate = Joi.object({
@@ -125,7 +134,7 @@ class UserController {
             const {userId} = req;
 
             if(!userId){
-                throw HttpError(403, {message: 'not registered'});
+                throw HttpError(403, 'not registered');
             }
 
             const deletedAccount = await Users.destroy({where: {id: userId}});
@@ -146,7 +155,7 @@ class UserController {
             const user = await Users.findOne({
                 where: {email, status: 'pending'}
             });
-            console.log(user, 'user');
+
             if (user.confirmToken !== token) {
                 throw HttpError(403);
             }
@@ -169,7 +178,7 @@ class UserController {
             const {adminId} = req;
 
             if(!adminId){
-                throw HttpError(403, {message: 'not registered as admin'});
+                throw HttpError(403, 'not registered as admin');
             }
 
             if (search) {
@@ -201,11 +210,11 @@ class UserController {
             const {adminId, userId} = req;
 
             if(!adminId && !userId){
-                throw HttpError(403, {message: 'not registered'});
+                throw HttpError(403, 'not registered');
             }
 
             if (!id) {
-                throw HttpError(404);
+                throw HttpError(404, 'not send id for get single user');
             }
 
             const user = await Users.findOne({ where: {id} });

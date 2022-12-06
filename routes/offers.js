@@ -10,5 +10,4 @@ router.delete('/:slugName', OffersController.deleteOffer);
 router.put('/:slugName', uploader.single("image"), OffersController.updateOffer);
 router.post('/', uploader.single("image"), OffersController.createOffer);
 
-
 export default router;

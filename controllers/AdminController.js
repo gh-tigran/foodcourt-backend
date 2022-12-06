@@ -12,10 +12,19 @@ class AdminController {
         try {
             const {email, password} = req.body;
 
+            const validate = Joi.object({
+                email: Joi.string().min(2).max(50).required(),
+                password: Joi.string().min(8).max(50).required(),
+            }).validate({email, password});
+
+            if (validate.error) {
+                throw HttpError(403, validate.error);
+            }
+
             const admin = await Admin.findOne({ where: {email} });
 
             if (!admin || admin.getDataValue('password') !== Admin.passwordHash(password)) {
-                throw HttpError(403);
+                throw HttpError(403, 'invalid login or password');
             }
 
             const token = jwt.sign({adminId: admin.id}, JWT_SECRET);
@@ -36,13 +45,13 @@ class AdminController {
             const {adminId} = req;
 
             if(!adminId){
-                throw HttpError(403, {message: 'not registered as admin'});
+                throw HttpError(403, 'not registered as admin');
             }
 
             const admin = await Admin.findOne({where: {id: adminId}});
 
             if(!admin || admin.possibility !== 'senior'){
-                throw HttpError(403, {message: 'not registered as senior admin'});
+                throw HttpError(403, 'not registered as senior admin');
             }
 
             const validate = Joi.object({
@@ -123,13 +132,13 @@ class AdminController {
             const {adminId} = req;
 
             if(!adminId){
-                throw HttpError(403, {message: 'not registered as admin'});
+                throw HttpError(403, 'not registered as admin');
             }
 
             const admin = await Admin.findOne({where: {id: adminId}});
 
             if(!admin || admin.possibility !== 'senior'){
-                throw HttpError(403, {message: 'not registered as senior admin'});
+                throw HttpError(403, 'not registered as senior admin');
             }
 
             const validate = Joi.object({
@@ -168,13 +177,13 @@ class AdminController {
             const {adminId} = req;
 
             if(!adminId){
-                throw HttpError(403, {message: 'not registered as admin'});
+                throw HttpError(403, 'not registered as admin');
             }
 
             const admin = await Admin.findOne({where: {id: adminId}});
 
             if(!admin || admin.possibility !== 'senior'){
-                throw HttpError(403, {message: 'not registered as senior admin'});
+                throw HttpError(403, 'not registered as senior admin');
             }
 
             const deletedAdmin = await Admin.destroy({where: {id}});
@@ -195,13 +204,13 @@ class AdminController {
             const {adminId} = req;
 
             if(!adminId){
-                throw HttpError(403, {message: 'not registered as admin'});
+                throw HttpError(403, 'not registered as admin');
             }
 
             const admin = await Admin.findOne({where: {id: adminId}});
 
             if(!admin || admin.possibility !== 'senior'){
-                throw HttpError(403, {message: 'not registered as senior admin'});
+                throw HttpError(403, 'not registered as senior admin');
             }
 
             if (search) {
@@ -233,7 +242,7 @@ class AdminController {
             const {adminId} = req;
 
             if(!adminId){
-                throw HttpError(403, {message: 'not registered as admin'});
+                throw HttpError(403, 'not registered as admin');
             }
 
             if (!id) {
@@ -245,6 +254,18 @@ class AdminController {
             res.json({
                 status: 'ok',
                 admin: admin || {}
+            });
+        } catch (e) {
+            next(e);
+        }
+    };
+
+    static logout = async (req, res, next) => {
+        try {
+
+            res.json({
+                status: 'ok',
+                admin: {}
             });
         } catch (e) {
             next(e);
