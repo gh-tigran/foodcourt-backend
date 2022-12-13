@@ -8,6 +8,25 @@ import Email from "../services/Email";
 const {JWT_SECRET} = process.env;
 
 class AdminController {
+    static admin = async (req, res, next) => {
+        try {
+            const {adminId} = req;
+
+            if(!adminId){
+                throw HttpError(403, 'not registered as admin');
+            }
+
+            const admin = await Admin.findOne({ where: {id: adminId} });
+
+            res.json({
+                status: 'ok',
+                admin: admin || {}
+            });
+        } catch (e) {
+            next(e);
+        }
+    };
+
     static login = async (req, res, next) => {
         try {
             const {email, password} = req.body;
@@ -18,7 +37,7 @@ class AdminController {
             }).validate({email, password});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw new HttpError(403, validate.error);
             }
 
             const admin = await Admin.findOne({ where: {email} });
@@ -48,9 +67,9 @@ class AdminController {
                 throw HttpError(403, 'not registered as admin');
             }
 
-            const admin = await Admin.findOne({where: {id: adminId}});
+            const admin = await Admin.findOne({where: {id: adminId, possibility: 'senior'}});
 
-            if(!admin || admin.possibility !== 'senior'){
+            if(!admin){
                 throw HttpError(403, 'not registered as senior admin');
             }
 
@@ -137,7 +156,11 @@ class AdminController {
 
             const admin = await Admin.findOne({where: {id: adminId}});
 
-            if(!admin || admin.possibility !== 'senior'){
+            if(!admin){
+                throw HttpError(403, 'not registered as admin');
+            }
+
+            if(possibility && admin.possibility !== 'senior'){
                 throw HttpError(403, 'not registered as senior admin');
             }
 
@@ -180,9 +203,9 @@ class AdminController {
                 throw HttpError(403, 'not registered as admin');
             }
 
-            const admin = await Admin.findOne({where: {id: adminId}});
+            const admin = await Admin.findOne({where: {id: adminId, possibility: 'senior'}});
 
-            if(!admin || admin.possibility !== 'senior'){
+            if(!admin){
                 throw HttpError(403, 'not registered as senior admin');
             }
 
@@ -207,9 +230,9 @@ class AdminController {
                 throw HttpError(403, 'not registered as admin');
             }
 
-            const admin = await Admin.findOne({where: {id: adminId}});
+            const admin = await Admin.findOne({where: {id: adminId, possibility: 'senior'}});
 
-            if(!admin || admin.possibility !== 'senior'){
+            if(!admin){
                 throw HttpError(403, 'not registered as senior admin');
             }
 
@@ -254,18 +277,6 @@ class AdminController {
             res.json({
                 status: 'ok',
                 admin: admin || {}
-            });
-        } catch (e) {
-            next(e);
-        }
-    };
-
-    static logout = async (req, res, next) => {
-        try {
-
-            res.json({
-                status: 'ok',
-                admin: {}
             });
         } catch (e) {
             next(e);

@@ -9,16 +9,17 @@ import Joi from "joi";
 export default class ProductsController {
     static getProducts = async (req, res, next) => {
         try {
-            let {order = 0, page = 1, limit = 2} = req.query;
+            let {order = 0, page = 1, limit = 10, title = ''} = req.query;
             page = +page;
             limit = +limit;
             const offset = (page - 1) * limit;
-            const count = await Products.count();
-            const totalPages = Math.ceil(count / limit);
             const orderTypes = Products.getOrderTypes();
+            const where = title ? {title: { $like: `%${title}%` }} : {};
+            const count = await Products.count({where});
+            const totalPages = Math.ceil(count / limit);
 
             const products = await Products.findAll({
-                where: {},
+                where,
                 include: [{
                     model: Categories,
                     as: 'category',
@@ -27,8 +28,7 @@ export default class ProductsController {
                 order: [
                     [
                         orderTypes[order].orderBy,
-                        orderTypes[order].type]
-                    ,
+                        orderTypes[order].type],
                 ],
                 offset,
                 limit
@@ -36,7 +36,7 @@ export default class ProductsController {
 
             res.json({
                 status: "ok",
-                products: !_.isEmpty(products) ? {
+                data: !_.isEmpty(products) ? {
                     products,
                     orderTypes,
                     totalPages,
@@ -52,7 +52,7 @@ export default class ProductsController {
     static getProductsByCategory = async (req, res, next) => {
         try {
             const {categorySlug} = req.params;
-            let {order = 0, page = 1, limit = 2} = req.query;
+            let {order = 0, page = 1, limit = 10} = req.query;
             page = +page;
             limit = +limit;
             const offset = (page - 1) * limit;
@@ -87,7 +87,7 @@ export default class ProductsController {
 
             res.json({
                 status: "ok",
-                products: !_.isEmpty(products) ? {
+                data: !_.isEmpty(products) ? {
                     products,
                     orderTypes,
                     totalPages,
@@ -141,10 +141,11 @@ export default class ProductsController {
                 throw HttpError(403, 'not registered as admin');
             }
 
+
             const validate = Joi.object({
                 title: Joi.string().min(2).max(80).required(),
                 description: Joi.string().min(2).max(3000).required(),
-                price: Joi.number().min(10).max(50000).required(),
+                price: Joi.number().min(10).max(1000000).required(),
                 categorySlug: Joi.string().min(2).max(80).required(),
             }).validate({title, description, price, categorySlug});
 
@@ -205,7 +206,7 @@ export default class ProductsController {
                 slugName: Joi.string().min(2).max(80).required(),
                 title: Joi.string().min(2).max(80),
                 description: Joi.string().min(2).max(3000),
-                price: Joi.number().min(10).max(50000),
+                price: Joi.number().min(10).max(1000000),
                 categorySlug: Joi.string().min(2).max(80),
             }).validate({slugName, title, description, price, categorySlug});
 

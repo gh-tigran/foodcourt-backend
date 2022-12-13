@@ -16,11 +16,7 @@ Slides.init({
     imagePath: {
         type: DataTypes.STRING(150),
         allowNull: false,
-    },
-    src: {
-        type: DataTypes.STRING(150),
-        allowNull: false,
-    },
+    }
 }, {
     sequelize,
     modelName: 'slides',

@@ -132,7 +132,7 @@ export default class MapController {
             const {slugName} = req.params;
             const {lat, lon, title, location} = req.body;
             const {adminId} = req;
-
+            console.log(files);
             if(!adminId){
                 throw HttpError(403, 'not registered as admin');
             }
@@ -174,7 +174,7 @@ export default class MapController {
                 throw HttpError(404, "Not found branch from that slugName");
             }
 
-            if (!_.isEmpty(isExistBranchFromThatCoords)) {
+            if (isExistBranchFromThatCoords && isExistBranchFromThatCoords.slugName !== slugName) {
                 throw HttpError(403, "Branch from that coords already exist!!!");
             }
 

@@ -9,16 +9,10 @@ import Joi from 'joi';
 export default class OffersController {
     static getOffers = async (req, res, next) => {
         try {
-            let {page = 1, limit = 3} = req.query;
-            page = +page;
-            limit = +limit;
-            const offset = (page - 1) * limit;
+            const {title} = req.query;
+            const where = title ? {title: { $like: `%${title}%` }} : {};
 
-            const offers = await Offers.findAll({
-                where: {},
-                offset,
-                limit
-            });
+            const offers = await Offers.findAll({where});
 
             res.json({
                 status: "ok",

@@ -9,22 +9,23 @@ import Joi from "joi";
 export default class NewsController {
     static getNews = async (req, res, next) => {
         try {
-            let {page = 1, limit = 2} = req.query;
+            let {page = 1, limit = 10, title = ''} = req.query;
             page = +page;
             limit = +limit;
             const offset = (page - 1) * limit;
-            const count = await News.count();
+            const where = title ? {title: { $like: `%${title}%` }} : {};
+            const count = await News.count({where});
             const totalPages = Math.ceil(count / limit);
 
             const news = await News.findAll({
-                where: {},
+                where,
                 offset,
                 limit
             });
 
             res.json({
                 status: "ok",
-                news: !_.isEmpty(news) ? {
+                data: !_.isEmpty(news) ? {
                     news,
                     totalPages
                 } : {},

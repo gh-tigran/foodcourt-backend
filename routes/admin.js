@@ -8,12 +8,14 @@ router.post('/login', AdminController.login);
 
 router.get('/confirm', AdminController.confirm);
 
-router.put('/:id', AdminController.modifyAccount);
-
-router.delete('/:id', AdminController.deleteAccount);
+router.get('/admin', AdminController.admin);
 
 router.get('/', AdminController.list);
 
 router.get('/:id', AdminController.single);
+
+router.put('/:id', AdminController.modifyAccount);
+
+router.delete('/:id', AdminController.deleteAccount);
 
 export default router;

@@ -48,19 +48,10 @@ export default class SlidesController {
     static createSlide = async (req, res, next) => {
         try {
             const {file} = req;
-            const {src} = req.body;
             const {adminId} = req;
 
             if(!adminId){
                 throw HttpError(403, 'not registered as admin');
-            }
-
-            const validate = Joi.object({
-                src: Joi.string().min(1).required(),
-            }).validate({src});
-
-            if (validate.error) {
-                throw HttpError(403, validate.error);
             }
 
             if(_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)){
@@ -73,7 +64,6 @@ export default class SlidesController {
 
             const createdSlide = await Slides.create({
                 imagePath: imagePath,
-                src,
             });
 
             res.json({
@@ -92,7 +82,6 @@ export default class SlidesController {
         try {
             const {file} = req;
             const {id} = req.params;
-            const {src} = req.body;
             const {adminId} = req;
 
             if(!adminId){
@@ -101,8 +90,7 @@ export default class SlidesController {
 
             const validate = Joi.object({
                 id: Joi.number().min(1).required(),
-                src: Joi.string().min(1).max(150),
-            }).validate({id, src});
+            }).validate({id});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
@@ -126,7 +114,6 @@ export default class SlidesController {
 
             const updatedSlide = await Slides.update({
                 imagePath: filePath || updatingSlide.imagePath,
-                src
             }, {where: {id}});
 
             res.json({

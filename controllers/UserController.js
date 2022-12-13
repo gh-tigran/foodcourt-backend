@@ -4,6 +4,7 @@ import HttpError from "http-errors";
 import Joi from "joi";
 import { v4 as uuidV4 } from "uuid";
 import Email from "../services/Email";
+import _ from "lodash";
 
 const {JWT_SECRET} = process.env;
 
@@ -173,31 +174,45 @@ class UserController {
 
     static list = async (req, res, next) => {
         try {
-            const {search} = req.query;
-            const where = {};
+            let {page = 1, limit = 10, name = ''} = req.query;
+            page = +page;
+            limit = +limit;
+            const offset = (page - 1) * limit;
             const {adminId} = req;
+            let where = {};
 
             if(!adminId){
                 throw HttpError(403, 'not registered as admin');
             }
 
-            if (search) {
+            if (name) {
                 where.$or = [{
                     firstName: {
-                        $like: `%${search}%`
+                        $like: `%${name}%`
                     }
                 }, {
                     lastName: {
-                        $like: `%${search}%`
+                        $like: `%${name}%`
                     }
                 }]
             }
 
-            const users = await Users.findAll({ where });
+            const count = await Users.count({where});
+            const totalPages = Math.ceil(count / limit);
 
+            const users = await Users.findAll({
+                where,
+                offset,
+                limit
+            });
+            console.log(users)
             res.json({
                 status: 'ok',
-                users
+                data: !_.isEmpty(users) ? {
+                    users,
+                    page,
+                    totalPages,
+                }: {},
             });
         } catch (e) {
             next(e);

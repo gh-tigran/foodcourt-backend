@@ -9,7 +9,10 @@ import Joi from "joi";
 export default class CategoriesController {
     static getCategories = async (req, res, next) => {
         try {
-            const categories = await Categories.findAll();
+            const {name} = req.query;
+            const where = name ? {name: { $like: `%${name}%` }} : {};
+
+            const categories = await Categories.findAll({where});
 
             res.json({
                 status: "ok",
@@ -48,6 +51,8 @@ export default class CategoriesController {
             const {file} = req;
             const {name} = req.body;
             const {adminId} = req;
+
+            console.log('-----', file, name, '-----');
 
             if(!adminId){
                 throw HttpError(403, 'not registered as admin');
