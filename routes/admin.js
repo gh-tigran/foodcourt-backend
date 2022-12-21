@@ -18,4 +18,8 @@ router.put('/:id', AdminController.modifyAccount);
 
 router.delete('/:id', AdminController.deleteAccount);
 
+router.post('/forget-pass', AdminController.forgetPassword);
+
+router.post('/change-pass', AdminController.changePassword);
+
 export default router;

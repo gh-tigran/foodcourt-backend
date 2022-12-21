@@ -19,6 +19,15 @@ class Email {
       html: `<a href="${frontUrl}?email=${email}&token=${token}">Activate foodcourt account</a>`
     })
   }
+
+  static sendPasswordChangeEmail(email, token) {
+    return transporter.sendMail({
+      from: '"Armen" <armmmartirosyann@mail.ru>',
+      to: email,
+      subject: 'Change password token',
+      html: `<div>Foodcourt account token - <b>${token}</b></div>`
+    })
+  }
 }
 
 export default Email

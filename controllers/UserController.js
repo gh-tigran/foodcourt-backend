@@ -96,7 +96,7 @@ class UserController {
 
     static modifyAccount = async (req, res, next) => {
         try {
-            const {firstName, lastName, phoneNum, password} = req.body;
+            const {firstName, lastName, phoneNum} = req.body;
             const {userId} = req;
 
             if(!userId){
@@ -107,8 +107,7 @@ class UserController {
                 firstName: Joi.string().min(2).max(80),
                 lastName: Joi.string().min(2).max(80),
                 phoneNum: Joi.number().min(1),
-                password: Joi.string().min(8).max(50),
-            }).validate({firstName, lastName, phoneNum, password});
+            }).validate({firstName, lastName, phoneNum});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
@@ -118,7 +117,6 @@ class UserController {
                 firstName,
                 lastName,
                 phoneNum,
-                password
             }, {where: {id: userId},});
 
             res.json({
@@ -242,6 +240,90 @@ class UserController {
             next(e);
         }
     };
+
+    static forgetPassword = async (req, res, next) => {
+        try {
+            const {email} = req.body;
+
+            const validate = Joi.object({
+                email: Joi.string().min(10).max(50).required(),
+            }).validate({email});
+
+            if (validate.error) {
+                throw HttpError(403, validate.error);
+            }
+
+            const forgetAdmin = await Users.findOne({where: {email}});
+
+            if(_.isEmpty(forgetAdmin)){
+                throw HttpError(403, "Email isn't valid");
+            }
+
+            if(forgetAdmin.confirmToken && forgetAdmin.status === 'pending'){
+                throw HttpError(403, "Email isn't active. Please activate account by token from email before changing password");
+            }
+
+            const confirmToken = uuidV4();
+
+            try {
+                await Email.sendPasswordChangeEmail(email, confirmToken);
+            }catch (e){
+                throw HttpError(403, {message: `Error in sending email message`});
+            }
+
+            await Users.update({
+                confirmToken,
+            }, {where: {id: forgetAdmin.id},});
+
+            res.json({
+                status: 'ok',
+            });
+        } catch (e) {
+            next(e)
+        }
+    }
+
+    static changePassword = async (req, res, next) => {
+        try {
+            const {email, password, token} = req.body;
+
+            const validate = Joi.object({
+                email: Joi.string().min(10).max(50).required(),
+                password: Joi.string().min(8).max(50).required(),
+                token: Joi.string().min(8).max(50).required(),
+            }).validate({email, password, token});
+
+            if (validate.error) {
+                throw HttpError(403, validate.error);
+            }
+
+            const changeAdmin = await Users.findOne({where: {email}});
+
+            if(_.isEmpty(changeAdmin)){
+                throw HttpError(403, "Email isn't valid");
+            }
+
+            if(changeAdmin.status !== 'active'){
+                throw HttpError(403, "Account isn't active");
+            }
+
+            if(changeAdmin.confirmToken !== token){
+                throw HttpError(403, "Invalid token");
+            }
+
+            const updatedAccount = await Users.update({
+                confirmToken: null,
+                password,
+            }, {where: {id: changeAdmin.id},});
+
+            res.json({
+                status: 'ok',
+                user: updatedAccount,
+            });
+        } catch (e) {
+            next(e)
+        }
+    }
 }
 
 export default UserController

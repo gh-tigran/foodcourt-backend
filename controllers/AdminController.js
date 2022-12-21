@@ -4,6 +4,7 @@ import HttpError from "http-errors";
 import Joi from "joi";
 import { v4 as uuidV4 } from "uuid";
 import Email from "../services/Email";
+import _ from "lodash";
 
 const {JWT_SECRET} = process.env;
 
@@ -282,6 +283,90 @@ class AdminController {
             next(e);
         }
     };
+
+    static forgetPassword = async (req, res, next) => {
+        try {
+            const {email} = req.body;
+
+            const validate = Joi.object({
+                email: Joi.string().min(10).max(50).required(),
+            }).validate({email});
+
+            if (validate.error) {
+                throw HttpError(403, validate.error);
+            }
+
+            const forgetAdmin = await Admin.findOne({where: {email}});
+
+            if(_.isEmpty(forgetAdmin)){
+                throw HttpError(403, "Email isn't valid");
+            }
+
+            if(forgetAdmin.confirmToken && forgetAdmin.status === 'pending'){
+                throw HttpError(403, "Email isn't active. Please activate account by token from email before changing password");
+            }
+
+            const confirmToken = uuidV4();
+
+            try {
+                await Email.sendPasswordChangeEmail(email, confirmToken);
+            }catch (e){
+                throw HttpError(403, {message: `Error in sending email message`});
+            }
+
+            await Admin.update({
+                confirmToken,
+            }, {where: {id: forgetAdmin.id},});
+
+            res.json({
+                status: 'ok',
+            });
+        } catch (e) {
+            next(e)
+        }
+    }
+
+    static changePassword = async (req, res, next) => {
+        try {
+            const {email, password, token} = req.body;
+
+            const validate = Joi.object({
+                email: Joi.string().min(10).max(50).required(),
+                password: Joi.string().min(8).max(50).required(),
+                token: Joi.string().min(8).max(50).required(),
+            }).validate({email, password, token});
+
+            if (validate.error) {
+                throw HttpError(403, validate.error);
+            }
+
+            const changeAdmin = await Admin.findOne({where: {email}});
+
+            if(_.isEmpty(changeAdmin)){
+                throw HttpError(403, "Email isn't valid");
+            }
+
+            if(changeAdmin.status !== 'active'){
+                throw HttpError(403, "Account isn't active");
+            }
+
+            if(changeAdmin.confirmToken !== token){
+                throw HttpError(403, "Invalid token");
+            }
+
+            const updatedAccount = await Admin.update({
+                confirmToken: null,
+                password,
+            }, {where: {id: changeAdmin.id},});
+
+            res.json({
+                status: 'ok',
+                user: updatedAccount,
+            });
+        } catch (e) {
+            next(e)
+        }
+    }
 }
 
 export default AdminController
