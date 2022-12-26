@@ -1,13 +1,14 @@
 import express from "express";
 import SlidesController from "../controllers/SlidesController";
 import uploader from "../middlewares/fileUploader";
+import allowCurrent from "../middlewares/allowCurrent";
 
 const router = express.Router();
 
-router.get('/', SlidesController.getSlides);
-router.get('/:id', SlidesController.getSingleSlide);
-router.delete('/:id', SlidesController.deleteSlide);
-router.put('/:id', uploader.single("image"), SlidesController.updateSlide);
-router.post('/', uploader.single("image"), SlidesController.createSlide);
+router.get('/get/', SlidesController.getSlides);
+router.get('/get/:id', SlidesController.getSingleSlide);
+router.delete('/:id', allowCurrent('deleteSlide'), SlidesController.deleteSlide);
+router.put('/:id', allowCurrent('updateSlide'), uploader.single("image"), SlidesController.updateSlide);
+router.post('/', allowCurrent('createSlide'), uploader.single("image"), SlidesController.createSlide);
 
 export default router;

@@ -1,25 +1,29 @@
 import express from "express";
 import AdminController from "../controllers/AdminController";
+import allowCurrent from "../middlewares/allowCurrent";
 
 const router = express.Router();
-router.post('/register', AdminController.register);
+router.post('/register', allowCurrent('adminRegister'), AdminController.register);
 
 router.post('/login', AdminController.login);
 
 router.get('/confirm', AdminController.confirm);
 
-router.get('/admin', AdminController.admin);
+router.get('/current', allowCurrent('adminGetCurrent'), AdminController.currentAdmin);
 
-router.get('/', AdminController.list);
+router.put('/current/', allowCurrent('adminModifyCurrent'), AdminController.modifyCurrentAccount);
 
-router.get('/:id', AdminController.single);
+router.delete('/current/', allowCurrent('adminDeleteCurrent'), AdminController.deleteCurrentAccount);
 
-router.put('/:id', AdminController.modifyAccount);
+router.get('/', allowCurrent('adminsList'), AdminController.list);
 
-router.delete('/:id', AdminController.deleteAccount);
+router.get('/:id', allowCurrent('adminSingle'), AdminController.single);
+
+router.put('/:id', allowCurrent('adminModify'), AdminController.modifyAccount);
+
+router.delete('/:id', allowCurrent('adminDelete'), AdminController.deleteAccount);
 
 router.post('/forget-pass', AdminController.forgetPassword);
 
 router.post('/change-pass', AdminController.changePassword);
-
 export default router;

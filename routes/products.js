@@ -1,14 +1,15 @@
 import express from "express";
 import uploader from "../middlewares/fileUploader";
 import ProductsController from "../controllers/ProductsController";
+import allowCurrent from "../middlewares/allowCurrent";
 
 const router = express.Router();
 
-router.get('/', ProductsController.getProducts);
-router.get('/category/:categorySlug', ProductsController.getProductsByCategory);
-router.get('/:slugName', ProductsController.getSingleProduct);
-router.delete('/:slugName', ProductsController.deleteProduct);
-router.put('/:slugName', uploader.single("image"), ProductsController.updateProduct);
-router.post('/', uploader.single("image"), ProductsController.createProduct);
+router.get('/get/', ProductsController.getProducts);
+router.get('/get/category/:categorySlug', ProductsController.getProductsByCategory);
+router.get('/get/:slugName', ProductsController.getSingleProduct);
+router.delete('/:slugName', allowCurrent('deleteProduct'), ProductsController.deleteProduct);
+router.put('/:slugName', allowCurrent('updateProduct'), uploader.single("image"), ProductsController.updateProduct);
+router.post('/', allowCurrent('createProduct'), uploader.single("image"), ProductsController.createProduct);
 
 export default router;

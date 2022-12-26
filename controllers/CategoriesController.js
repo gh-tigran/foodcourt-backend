@@ -50,13 +50,6 @@ export default class CategoriesController {
         try {
             const {file} = req;
             const {name} = req.body;
-            const {adminId} = req;
-
-            console.log('-----', file, name, '-----');
-
-            if(!adminId){
-                throw HttpError(403, 'not registered as admin');
-            }
 
             const validate = Joi.object({
                 name: Joi.string().min(2).max(80).required(),
@@ -98,11 +91,6 @@ export default class CategoriesController {
             const {file} = req;
             const {slugName} = req.params;
             const {name} = req.body;
-            const {adminId} = req;
-
-            if(!adminId){
-                throw HttpError(403, 'not registered as admin');
-            }
 
             const validate = Joi.object({
                 slugName: Joi.string().min(2).max(80).required(),
@@ -173,11 +161,6 @@ export default class CategoriesController {
     static deleteCategory = async (req, res, next) => {
         try {
             const {slugName} = req.params;
-            const {adminId} = req;
-
-            if(!adminId){
-                throw HttpError(403, 'not registered as admin');
-            }
 
             const validate = Joi.object({
                 slugName: Joi.string().min(2).max(80).required(),

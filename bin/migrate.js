@@ -1,9 +1,9 @@
-import {Admin, Users, Slides, Offers, Categories, Products, News, Map, MapImages} from "../models";
+import {Admin, Users, Basket, Slides, Offers, Categories, Products, News, Map, MapImages} from "../models";
 
 const {ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME, ADMIN_LAST_NAME, ADMIN_PHONE_NUM} = process.env;
 
 async function main() {
-    for (const Model of [Admin, Users, Slides, Offers, Categories, Products, News, Map, MapImages]) {
+    for (const Model of [Admin, Users, Basket, Slides, Offers, Categories, Products, News, Map, MapImages]) {
         console.log(Model);
 
         await Model.sync({alter: true});

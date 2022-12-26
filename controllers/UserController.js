@@ -7,11 +7,12 @@ import Email from "../services/Email";
 import _ from "lodash";
 
 const {JWT_SECRET} = process.env;
+const seqU = Users.sequelize;
 
 class UserController {
     static register = async (req, res, next) => {
         try {
-            const {firstName, lastName, email, phoneNum, password} = req.body;
+            const {firstName, lastName, email, phoneNum, password, confirmPassword} = req.body;
 
             const validate = Joi.object({
                 firstName: Joi.string().min(2).max(80).required(),
@@ -19,10 +20,15 @@ class UserController {
                 email: Joi.string().min(2).max(50).required(),
                 phoneNum: Joi.number().min(1).required(),
                 password: Joi.string().min(8).max(50).required(),
-            }).validate({firstName, lastName, email, phoneNum, password});
+                confirmPassword: Joi.string().min(8).max(50).required(),
+            }).validate({firstName, lastName, email, phoneNum, password, confirmPassword});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
+            }
+
+            if (confirmPassword !== password) {
+                throw HttpError(403, 'Confirm password is wrong!');
             }
 
             const existsUser = await Users.findOne({ where: {email} });
@@ -74,7 +80,7 @@ class UserController {
 
             const user = await Users.findOne({ where: {email} });
 
-            if (!user || user.getDataValue('password') !== Users.passwordHash(password)) {
+            if (_.isEmpty(user) || user.getDataValue('password') !== Users.passwordHash(password)) {
                 throw HttpError(403, 'Wrong email or password');
             }
 
@@ -88,59 +94,6 @@ class UserController {
                 status: 'ok',
                 token,
                 user
-            });
-        } catch (e) {
-            next(e)
-        }
-    }
-
-    static modifyAccount = async (req, res, next) => {
-        try {
-            const {firstName, lastName, phoneNum} = req.body;
-            const {userId} = req;
-
-            if(!userId){
-                throw HttpError(403, 'not registered');
-            }
-
-            const validate = Joi.object({
-                firstName: Joi.string().min(2).max(80),
-                lastName: Joi.string().min(2).max(80),
-                phoneNum: Joi.number().min(1),
-            }).validate({firstName, lastName, phoneNum});
-
-            if (validate.error) {
-                throw HttpError(403, validate.error);
-            }
-
-            const updatedAccount = await Users.update({
-                firstName,
-                lastName,
-                phoneNum,
-            }, {where: {id: userId},});
-
-            res.json({
-                status: 'ok',
-                updatedAccount
-            });
-        } catch (e) {
-            next(e)
-        }
-    }
-
-    static deleteAccount = async (req, res, next) => {
-        try {
-            const {userId} = req;
-
-            if(!userId){
-                throw HttpError(403, 'not registered');
-            }
-
-            const deletedAccount = await Users.destroy({where: {id: userId}});
-
-            res.json({
-                status: 'ok',
-                deletedAccount
             });
         } catch (e) {
             next(e)
@@ -176,23 +129,19 @@ class UserController {
             page = +page;
             limit = +limit;
             const offset = (page - 1) * limit;
-            const {adminId} = req;
             let where = {};
 
-            if(!adminId){
-                throw HttpError(403, 'not registered as admin');
-            }
-
             if (name) {
-                where.$or = [{
-                    firstName: {
+                where.$or = [
+                    seqU.where(seqU.fn("concat", seqU.col("firstName"),  ' ', seqU.col("lastName")), {
                         $like: `%${name}%`
-                    }
-                }, {
-                    lastName: {
+                    }),
+                    seqU.where(seqU.fn("concat", seqU.col("lastName"),  ' ', seqU.col("firstName")), {
                         $like: `%${name}%`
+                    }), {
+                        email: { $like: `%${name}%` }
                     }
-                }]
+                ]
             }
 
             const count = await Users.count({where});
@@ -203,7 +152,7 @@ class UserController {
                 offset,
                 limit
             });
-            console.log(users)
+
             res.json({
                 status: 'ok',
                 data: !_.isEmpty(users) ? {
@@ -220,14 +169,13 @@ class UserController {
     static single = async (req, res, next) => {
         try {
             const {id} = req.params;
-            const {adminId, userId} = req;
 
-            if(!adminId && !userId){
-                throw HttpError(403, 'not registered');
-            }
+            const validate = Joi.object({
+                id: Joi.number().min(1).required(),
+            }).validate({id});
 
-            if (!id) {
-                throw HttpError(404, 'not send id for get single user');
+            if (validate.error) {
+                throw HttpError(403, validate.error);
             }
 
             const user = await Users.findOne({ where: {id} });
@@ -240,6 +188,89 @@ class UserController {
             next(e);
         }
     };
+
+    static current = async (req, res, next) => {
+        try {
+            const {userId} = req;
+
+            const user = await Users.findOne({ where: {id: userId} });
+
+            res.json({
+                status: 'ok',
+                user: user || {}
+            });
+        } catch (e) {
+            next(e);
+        }
+    };
+
+    static modifyCurrentAccount = async (req, res, next) => {
+        try {
+            const {firstName, lastName, phoneNum} = req.body;
+            const {userId} = req;
+
+            const validate = Joi.object({
+                firstName: Joi.string().min(2).max(80),
+                lastName: Joi.string().min(2).max(80),
+                phoneNum: Joi.number().min(1),
+            }).validate({firstName, lastName, phoneNum});
+
+            if (validate.error) {
+                throw HttpError(403, validate.error);
+            }
+
+            const updatedAccount = await Users.update({
+                firstName,
+                lastName,
+                phoneNum,
+            }, {where: {id: userId},});
+
+            res.json({
+                status: 'ok',
+                updatedAccount
+            });
+        } catch (e) {
+            next(e)
+        }
+    }
+
+    static deleteCurrentAccount = async (req, res, next) => {
+        try {
+            const {userId} = req;
+
+            const deletedAccount = await Users.destroy({where: {id: userId}});
+
+            res.json({
+                status: 'ok',
+                deletedAccount
+            });
+        } catch (e) {
+            next(e)
+        }
+    }
+
+    static deleteAccount = async (req, res, next) => {
+        try {
+            const {id} = req.params;
+
+            const validate = Joi.object({
+                id: Joi.number().min(1).required(),
+            }).validate({id});
+
+            if (validate.error) {
+                throw HttpError(403, validate.error);
+            }
+
+            const deletedAccount = await Users.destroy({where: {id}});
+
+            res.json({
+                status: 'ok',
+                deletedAccount
+            });
+        } catch (e) {
+            next(e)
+        }
+    }
 
     static forgetPassword = async (req, res, next) => {
         try {
@@ -285,16 +316,21 @@ class UserController {
 
     static changePassword = async (req, res, next) => {
         try {
-            const {email, password, token} = req.body;
+            const {email, password, token, confirmPassword} = req.body;
 
             const validate = Joi.object({
                 email: Joi.string().min(10).max(50).required(),
                 password: Joi.string().min(8).max(50).required(),
+                confirmPassword: Joi.string().min(8).max(50).required(),
                 token: Joi.string().min(8).max(50).required(),
-            }).validate({email, password, token});
+            }).validate({email, password, confirmPassword, token});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
+            }
+
+            if(confirmPassword !== password){
+                throw HttpError(403, "Invalid confirm password");
             }
 
             const changeAdmin = await Users.findOne({where: {email}});

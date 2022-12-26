@@ -9,13 +9,9 @@ import _ from "lodash";
 const {JWT_SECRET} = process.env;
 
 class AdminController {
-    static admin = async (req, res, next) => {
+    static currentAdmin = async (req, res, next) => {
         try {
             const {adminId} = req;
-
-            if(!adminId){
-                throw HttpError(403, 'not registered as admin');
-            }
 
             const admin = await Admin.findOne({ where: {id: adminId} });
 
@@ -43,8 +39,12 @@ class AdminController {
 
             const admin = await Admin.findOne({ where: {email} });
 
-            if (!admin || admin.getDataValue('password') !== Admin.passwordHash(password)) {
+            if (_.isEmpty(admin)  || admin.getDataValue('password') !== Admin.passwordHash(password)) {
                 throw HttpError(403, 'invalid login or password');
+            }
+
+            if (admin.status !== 'active') {
+                throw HttpError(403, 'Admin is not active!');
             }
 
             const token = jwt.sign({adminId: admin.id}, JWT_SECRET);
@@ -61,18 +61,7 @@ class AdminController {
 
     static register = async (req, res, next) => {
         try {
-            const {firstName, lastName, email, phoneNum, password, possibility} = req.body;
-            const {adminId} = req;
-
-            if(!adminId){
-                throw HttpError(403, 'not registered as admin');
-            }
-
-            const admin = await Admin.findOne({where: {id: adminId, possibility: 'senior'}});
-
-            if(!admin){
-                throw HttpError(403, 'not registered as senior admin');
-            }
+            const {firstName, lastName, email, phoneNum, password, possibility, confirmPassword} = req.body;
 
             const validate = Joi.object({
                 firstName: Joi.string().min(2).max(80).required(),
@@ -80,11 +69,16 @@ class AdminController {
                 email: Joi.string().min(2).max(50).required(),
                 phoneNum: Joi.number().min(1).required(),
                 password: Joi.string().min(8).max(50).required(),
+                confirmPassword: Joi.string().min(8).max(50).required(),
                 possibility: Joi.string().valid('junior', 'middle', 'senior').required(),
-            }).validate({firstName, lastName, email, phoneNum, password, possibility});
+            }).validate({firstName, lastName, email, phoneNum, password, confirmPassword, possibility});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
+            }
+
+            if (confirmPassword !== password) {
+                throw HttpError(403, 'Confirm password is wrong!');
             }
 
             const existsAdmin = await Admin.findOne({ where: {email} });
@@ -130,7 +124,7 @@ class AdminController {
                 where: {email, status: 'pending'}
             });
 
-            if (admin.confirmToken !== token) {
+            if (_.isEmpty(admin) || admin.confirmToken !== token) {
                 throw HttpError(403);
             }
 
@@ -148,21 +142,14 @@ class AdminController {
     static modifyAccount = async (req, res, next) => {
         try {
             const {id} = req.params;
-            const {firstName, lastName, phoneNum, password, possibility} = req.body;
-            const {adminId} = req;
+            let {firstName, lastName, phoneNum, possibility} = req.body;
 
-            if(!adminId){
-                throw HttpError(403, 'not registered as admin');
-            }
+            const admin = await Admin.findOne({where: {id}});
 
-            const admin = await Admin.findOne({where: {id: adminId}});
-
-            if(!admin){
-                throw HttpError(403, 'not registered as admin');
-            }
-
-            if(possibility && admin.possibility !== 'senior'){
-                throw HttpError(403, 'not registered as senior admin');
+            if(admin.status === 'active'){
+                firstName = undefined;
+                lastName = undefined;
+                phoneNum = undefined;
             }
 
             const validate = Joi.object({
@@ -170,9 +157,8 @@ class AdminController {
                 firstName: Joi.string().min(2).max(80),
                 lastName: Joi.string().min(2).max(80),
                 phoneNum: Joi.number().min(1),
-                password: Joi.string().min(8).max(50),
                 possibility: Joi.string().valid('junior', 'middle', 'senior'),
-            }).validate({id, firstName, lastName, phoneNum, password, possibility});
+            }).validate({id, firstName, lastName, phoneNum, possibility});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
@@ -182,7 +168,6 @@ class AdminController {
                 firstName,
                 lastName,
                 phoneNum,
-                password,
                 possibility
             }, {where: {id}});
 
@@ -198,19 +183,65 @@ class AdminController {
     static deleteAccount = async (req, res, next) => {
         try {
             const {id} = req.params;
+
+            const validate = Joi.object({
+                id: Joi.number().min(1).required(),
+            }).validate({id});
+
+            if (validate.error) {
+                throw HttpError(403, validate.error);
+            }
+
+            const deletedAdmin = await Admin.update({
+                status: 'deleted'
+            }, {where: {id}});
+
+            res.json({
+                status: 'ok',
+                deletedAdmin
+            });
+        } catch (e) {
+            next(e)
+        }
+    }
+
+    static modifyCurrentAccount = async (req, res, next) => {
+        try {
+            const {adminId} = req;
+            let {firstName, lastName, phoneNum} = req.body;
+
+            const validate = Joi.object({
+                firstName: Joi.string().min(2).max(80),
+                lastName: Joi.string().min(2).max(80),
+                phoneNum: Joi.number().min(1),
+            }).validate({firstName, lastName, phoneNum});
+
+            if (validate.error) {
+                throw HttpError(403, validate.error);
+            }
+
+            const updatedAdmin = await Admin.update({
+                firstName,
+                lastName,
+                phoneNum,
+            }, {where: {id: adminId, status: 'active'}});
+
+            res.json({
+                status: 'ok',
+                updatedAdmin
+            });
+        } catch (e) {
+            next(e)
+        }
+    }
+
+    static deleteCurrentAccount = async (req, res, next) => {
+        try {
             const {adminId} = req;
 
-            if(!adminId){
-                throw HttpError(403, 'not registered as admin');
-            }
-
-            const admin = await Admin.findOne({where: {id: adminId, possibility: 'senior'}});
-
-            if(!admin){
-                throw HttpError(403, 'not registered as senior admin');
-            }
-
-            const deletedAdmin = await Admin.destroy({where: {id}});
+            const deletedAdmin = await Admin.update({
+                status: 'deleted'
+            }, {where: {id: adminId}});
 
             res.json({
                 status: 'ok',
@@ -223,33 +254,7 @@ class AdminController {
 
     static list = async (req, res, next) => {
         try {
-            const {search} = req.query;
-            const where = {};
-            const {adminId} = req;
-
-            if(!adminId){
-                throw HttpError(403, 'not registered as admin');
-            }
-
-            const admin = await Admin.findOne({where: {id: adminId, possibility: 'senior'}});
-
-            if(!admin){
-                throw HttpError(403, 'not registered as senior admin');
-            }
-
-            if (search) {
-                where.$or = [{
-                    firstName: {
-                        $like: `%${search}%`
-                    }
-                }, {
-                    lastName: {
-                        $like: `%${search}%`
-                    }
-                }]
-            }
-
-            const admins = await Admin.findAll({ where });
+            const admins = await Admin.findAll();
 
             res.json({
                 status: 'ok',
@@ -263,14 +268,13 @@ class AdminController {
     static single = async (req, res, next) => {
         try {
             const {id} = req.params;
-            const {adminId} = req;
 
-            if(!adminId){
-                throw HttpError(403, 'not registered as admin');
-            }
+            const validate = Joi.object({
+                id: Joi.number().min(1).required(),
+            }).validate({id});
 
-            if (!id) {
-                throw HttpError(404);
+            if (validate.error) {
+                throw HttpError(403, validate.error);
             }
 
             const admin = await Admin.findOne({ where: {id} });
@@ -328,16 +332,21 @@ class AdminController {
 
     static changePassword = async (req, res, next) => {
         try {
-            const {email, password, token} = req.body;
+            const {email, password, confirmPassword, token} = req.body;
 
             const validate = Joi.object({
                 email: Joi.string().min(10).max(50).required(),
                 password: Joi.string().min(8).max(50).required(),
+                confirmPassword: Joi.string().min(8).max(50).required(),
                 token: Joi.string().min(8).max(50).required(),
-            }).validate({email, password, token});
+            }).validate({email, password, confirmPassword, token});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
+            }
+
+            if (confirmPassword !== password) {
+                throw HttpError(403, 'Invalid confirm password');
             }
 
             const changeAdmin = await Admin.findOne({where: {email}});

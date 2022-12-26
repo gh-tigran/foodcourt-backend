@@ -7,11 +7,13 @@ import news from "./news";
 import map from "./map";
 import users from "./users";
 import admin from "./admin";
+import basket from "./basket";
 
 const router = express.Router();
 
 router.use('/admin', admin);
 router.use('/users', users);
+router.use('/basket', basket);
 router.use('/slides', slides);
 router.use('/offers', offers);
 router.use('/categories', categories);

@@ -48,11 +48,6 @@ export default class SlidesController {
     static createSlide = async (req, res, next) => {
         try {
             const {file} = req;
-            const {adminId} = req;
-
-            if(!adminId){
-                throw HttpError(403, 'not registered as admin');
-            }
 
             if(_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)){
                 throw HttpError(403, "Doesn't sent image!");
@@ -82,11 +77,6 @@ export default class SlidesController {
         try {
             const {file} = req;
             const {id} = req.params;
-            const {adminId} = req;
-
-            if(!adminId){
-                throw HttpError(403, 'not registered as admin');
-            }
 
             const validate = Joi.object({
                 id: Joi.number().min(1).required(),
@@ -131,11 +121,6 @@ export default class SlidesController {
     static deleteSlide = async (req, res, next) => {
         try {
             const {id} = req.params;
-            const {adminId} = req;
-
-            if(!adminId){
-                throw HttpError(403, 'not registered as admin');
-            }
 
             const validate = Joi.object({
                 id: Joi.number().min(1).required(),

@@ -1,4 +1,4 @@
-import {Categories, Products} from "../models";
+import {Basket, Categories, Products} from "../models";
 import path from "path";
 import fs from "fs";
 import {v4 as uuidV4} from "uuid";
@@ -135,11 +135,6 @@ export default class ProductsController {
         try {
             const {file} = req;
             const {title, description, price, categorySlug} = req.body;
-            const {adminId} = req;
-
-            if(!adminId){
-                throw HttpError(403, 'not registered as admin');
-            }
 
 
             const validate = Joi.object({
@@ -196,11 +191,6 @@ export default class ProductsController {
             const {file} = req;
             const {slugName} = req.params;
             const {title, description, price, categorySlug} = req.body;
-            const {adminId} = req;
-
-            if(!adminId){
-                throw HttpError(403, 'not registered as admin');
-            }
 
             const validate = Joi.object({
                 slugName: Joi.string().min(2).max(80).required(),
@@ -255,6 +245,19 @@ export default class ProductsController {
                 categorySlug
             }, {where: {slugName},});
 
+            if(price){
+                const basketProd = await Basket.findOne({where: {productId: updatingProduct.id}});
+
+                if(!_.isEmpty(basketProd)){
+                    const totalPrice = +price * +basketProd.quantity;
+
+                    await Basket.update({
+                        itemPrice: price,
+                        totalPrice,
+                    }, {where: {id: basketProd.id}})
+                }
+            }
+
             res.json({
                 status: "ok",
                 updatedProduct
@@ -270,11 +273,6 @@ export default class ProductsController {
     static deleteProduct = async (req, res, next) => {
         try {
             const {slugName} = req.params;
-            const {adminId} = req;
-
-            if(!adminId){
-                throw HttpError(403, 'not registered as admin');
-            }
 
             const validate = Joi.object({
                 slugName: Joi.string().min(2).max(80).required(),

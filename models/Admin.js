@@ -8,6 +8,7 @@ class Admin extends Model {
     static passwordHash = (val) => md5(md5(val) + PASSWORD_SECRET);
 
     static activate = async (email) => {
+        console.log(email);
         await Admin.update({
             status: 'active',
             confirmToken: null,
