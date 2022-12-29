@@ -13,7 +13,7 @@ router.get('/current', allowCurrent('adminGetCurrent'), AdminController.currentA
 
 router.put('/current/', allowCurrent('adminModifyCurrent'), AdminController.modifyCurrentAccount);
 
-router.delete('/current/', allowCurrent('adminDeleteCurrent'), AdminController.deleteCurrentAccount);
+//router.delete('/current/', allowCurrent('adminDeleteCurrent'), AdminController.deleteCurrentAccount);
 
 router.get('/', allowCurrent('adminsList'), AdminController.list);
 

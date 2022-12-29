@@ -146,6 +146,10 @@ class AdminController {
 
             const admin = await Admin.findOne({where: {id}});
 
+            if(admin.status === 'deleted'){
+                throw HttpError(403, 'Admin deleted!');
+            }
+
             if(admin.status === 'active'){
                 firstName = undefined;
                 lastName = undefined;
@@ -183,6 +187,7 @@ class AdminController {
     static deleteAccount = async (req, res, next) => {
         try {
             const {id} = req.params;
+            const {adminId} = req;
 
             const validate = Joi.object({
                 id: Joi.number().min(1).required(),
@@ -190,6 +195,10 @@ class AdminController {
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
+            }
+
+            if(id === adminId){
+                throw HttpError(403);
             }
 
             const deletedAdmin = await Admin.update({
@@ -235,22 +244,22 @@ class AdminController {
         }
     }
 
-    static deleteCurrentAccount = async (req, res, next) => {
-        try {
-            const {adminId} = req;
-
-            const deletedAdmin = await Admin.update({
-                status: 'deleted'
-            }, {where: {id: adminId}});
-
-            res.json({
-                status: 'ok',
-                deletedAdmin
-            });
-        } catch (e) {
-            next(e)
-        }
-    }
+    // static deleteCurrentAccount = async (req, res, next) => {
+    //     try {
+    //         const {adminId} = req;
+    //
+    //         const deletedAdmin = await Admin.update({
+    //             status: 'deleted'
+    //         }, {where: {id: adminId}});
+    //
+    //         res.json({
+    //             status: 'ok',
+    //             deletedAdmin
+    //         });
+    //     } catch (e) {
+    //         next(e)
+    //     }
+    // }
 
     static list = async (req, res, next) => {
         try {

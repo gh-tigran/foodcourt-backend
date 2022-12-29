@@ -52,7 +52,7 @@ export default class CategoriesController {
             const {name} = req.body;
 
             const validate = Joi.object({
-                name: Joi.string().min(2).max(80).required(),
+                name: Joi.string().min(4).max(80).required(),
             }).validate({name});
 
             if (validate.error) {

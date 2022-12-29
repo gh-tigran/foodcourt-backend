@@ -238,7 +238,9 @@ class UserController {
         try {
             const {userId} = req;
 
-            const deletedAccount = await Users.destroy({where: {id: userId}});
+            const deletedAccount = await Users.update({
+                status: 'deleted'
+            }, {where: {id: userId}});
 
             res.json({
                 status: 'ok',
@@ -261,7 +263,9 @@ class UserController {
                 throw HttpError(403, validate.error);
             }
 
-            const deletedAccount = await Users.destroy({where: {id}});
+            const deletedAccount = await Users.update({
+                status: 'deleted'
+            }, {where: {id}});
 
             res.json({
                 status: 'ok',
