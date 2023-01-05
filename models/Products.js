@@ -1,6 +1,5 @@
 import {DataTypes, Model} from "sequelize";
 import sequelize from "../services/sequelize";
-import Categories from "./Categories";
 import path from "path";
 import slug from "slug";
 
@@ -20,7 +19,7 @@ class Products extends Model {
         const sameSlugNameOffers = await Products.findAll({where: {slugName}});
 
         if(sameSlugNameOffers.length){
-            slugName = slugName + '-' + sameSlugNameOffers.length;
+            return '-';
         }
 
         return slugName;
@@ -55,8 +54,8 @@ Products.init({
         allowNull: false,
         unique: 'slugName',
     },
-    categorySlug: {
-        type: DataTypes.STRING(80),
+    type: {
+        type: DataTypes.ENUM('offer', 'product'),
         allowNull: false,
     },
 }, {
@@ -65,18 +64,18 @@ Products.init({
     tableName: 'products'
 });
 
-Products.belongsTo(Categories, {
-    foreignKey: 'categoryId',
-    as: 'category',
-    onUpdate: 'cascade',
-    onDelete: 'cascade'
-});
-
-Categories.hasMany(Products, {
-    foreignKey: 'categoryId',
-    as: 'products',
-    onUpdate: 'cascade',
-    onDelete: 'cascade'
-});
+// Products.belongsTo(Categories, {
+//     foreignKey: 'categoryId',
+//     as: 'category',
+//     onUpdate: 'cascade',
+//     onDelete: 'cascade'
+// });
+//
+// Categories.hasMany(Products, {
+//     foreignKey: 'categoryId',
+//     as: 'products',
+//     onUpdate: 'cascade',
+//     onDelete: 'cascade'
+// });
 
 export default Products;

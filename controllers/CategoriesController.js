@@ -1,4 +1,4 @@
-import {Categories, Products} from "../models";
+import {Categories, ProdCatRel} from "../models";
 import path from "path";
 import fs from "fs";
 import {v4 as uuidV4} from "uuid";
@@ -12,7 +12,7 @@ export default class CategoriesController {
             const {name} = req.query;
             const where = name ? {name: { $like: `%${name}%` }} : {};
 
-            const categories = await Categories.findAll({where});
+            const categories = await Categories.findAll({ where });
 
             res.json({
                 status: "ok",
@@ -66,6 +66,10 @@ export default class CategoriesController {
             const filePath = path.join('files', uuidV4() + '-' + file.originalname);
             const slugName = await Categories.generateSlug(name);
 
+            if(slugName === '-'){
+                throw HttpError(403, 'Invalid name');
+            }
+
             fs.renameSync(file.path, Categories.getImgPath(filePath));
 
             const createdCategory = await Categories.create({
@@ -104,7 +108,6 @@ export default class CategoriesController {
             const updatingCategory = await Categories.findOne({where: {slugName}});
             let updateImgPath = Categories.getImgPath(updatingCategory.imagePath);
             let slugNameUpdate = '';
-            let products = [];
             let imagePath;
 
             if (_.isEmpty(updatingCategory)) {
@@ -121,9 +124,9 @@ export default class CategoriesController {
             if(name && name !== updatingCategory.name){
                 slugNameUpdate = await Categories.generateSlug(name);
 
-                products = await Products.findAll({
-                    where: {categorySlug: slugName},
-                });
+                if(slugNameUpdate === '-'){
+                    throw HttpError(403, 'Invalid name');
+                }
             }
 
             const updatedCategory = await Categories.update({
@@ -131,20 +134,6 @@ export default class CategoriesController {
                 imagePath,
                 name,
             }, {where: {slugName},});
-
-            products.forEach(product => {
-                (async () => {
-                    await Products.update({
-                        imagePath: product.imagePath,
-                        slugName: product.slugName,
-                        categoryId: product.categoryId,
-                        title: product.title,
-                        description: product.description,
-                        price: product.price,
-                        categorySlug: slugNameUpdate,
-                    }, {where: {id: product.id},});
-                })()
-            });
 
             res.json({
                 status: "ok",
@@ -177,19 +166,12 @@ export default class CategoriesController {
             }
 
             const delImgPath = Categories.getImgPath(deletingCategory.imagePath);
-            const products = await Products.findAll({
-                where: {categorySlug: slugName},
-            });
 
             if (fs.existsSync(delImgPath)) fs.unlinkSync(delImgPath);
 
+            await ProdCatRel.destroy({where: {categoryId: deletingCategory.id}});
+
             const deletedCategory = await Categories.destroy({where: {slugName}});
-
-            products.forEach(product => {
-                const delProdImgPath = Products.getImgPath(product.imagePath);
-
-                if (fs.existsSync(delProdImgPath)) fs.unlinkSync(delProdImgPath);
-            });
 
             res.json({
                 status: "ok",
@@ -199,73 +181,4 @@ export default class CategoriesController {
             next(e);
         }
     }
-
-    // static updateCategory = async (req, res, next) => {
-    //     try {
-    //         const {file} = req;
-    //         const {slugName} = req.params;
-    //         const {name} = req.body;
-    //
-    //         const validate = Joi.object({
-    //             slugName: Joi.string().min(2).max(80).required(),
-    //             name: Joi.string().min(2).max(80).required(),
-    //         }).validate({slugName, name});
-    //
-    //         if (validate.error) {
-    //             throw HttpError(403, validate.error);
-    //         }
-    //
-    //         if (_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)) {
-    //             throw HttpError(403, "Image doesn't sent!");
-    //         }
-    //
-    //         const updatingCategory = await Categories.findOne({where: {slugName}});
-    //
-    //         if (_.isEmpty(updatingCategory)) {
-    //             throw HttpError(404, "Not found category from that slug");
-    //         }
-    //
-    //         const filePath = path.join('files', uuidV4() + '-' + file.originalname);
-    //         const updateImgPath = Categories.getImgPath(updatingCategory.imagePath);
-    //         const slugNameUpdate = await Categories.generateSlug(name);
-    //
-    //         if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath);
-    //
-    //         fs.renameSync(file.path, Categories.getImgPath(filePath));
-    //
-    //         const updatedCategory = await Categories.update({
-    //             imagePath: filePath,
-    //             slugName: slugNameUpdate,
-    //             name,
-    //         }, {where: {slugName},});
-    //
-    //         const products = await Products.findAll({
-    //             where: {categorySlug: slugName},
-    //         });
-    //
-    //         products.forEach(product => {
-    //             (async () => {
-    //                 await Products.update({
-    //                     imagePath: product.imagePath,
-    //                     slugName: product.slugName,
-    //                     categoryId: product.categoryId,
-    //                     title: product.title,
-    //                     description: product.description,
-    //                     price: product.price,
-    //                     categorySlug: slugNameUpdate,
-    //                 }, {where: {id: product.id},});
-    //             })()
-    //         });
-    //
-    //         res.json({
-    //             status: "ok",
-    //             updatedCategory
-    //         })
-    //     } catch (e) {
-    //         if (!_.isEmpty(req.file) && fs.existsSync(req.file.path)) {
-    //             fs.unlinkSync(req.file.path);
-    //         }
-    //         next(e);
-    //     }
-    // }
 }

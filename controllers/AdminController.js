@@ -67,7 +67,7 @@ class AdminController {
                 firstName: Joi.string().min(2).max(80).required(),
                 lastName: Joi.string().min(2).max(80).required(),
                 email: Joi.string().min(2).max(50).required(),
-                phoneNum: Joi.number().min(1).required(),
+                phoneNum: Joi.string().regex(/^\+\d{11,20}$/).required(),
                 password: Joi.string().min(8).max(50).required(),
                 confirmPassword: Joi.string().min(8).max(50).required(),
                 possibility: Joi.string().valid('junior', 'middle', 'senior').required(),
@@ -84,7 +84,11 @@ class AdminController {
             const existsAdmin = await Admin.findOne({ where: {email} });
 
             if (existsAdmin) {
-                throw HttpError(403, {email: `Admin from this email already registered`});
+                if(existsAdmin.status === "deleted"){
+                    await Admin.destroy({where: {id: existsAdmin.id}});
+                }else{
+                    throw HttpError(403, {email: `Admin from this email already registered`});
+                }
             }
 
             const confirmToken = uuidV4();
@@ -160,7 +164,7 @@ class AdminController {
                 id: Joi.number().min(1).required(),
                 firstName: Joi.string().min(2).max(80),
                 lastName: Joi.string().min(2).max(80),
-                phoneNum: Joi.number().min(1),
+                phoneNum: Joi.string().regex(/^\+\d{11,20}$/).required(),
                 possibility: Joi.string().valid('junior', 'middle', 'senior'),
             }).validate({id, firstName, lastName, phoneNum, possibility});
 
@@ -222,7 +226,7 @@ class AdminController {
             const validate = Joi.object({
                 firstName: Joi.string().min(2).max(80),
                 lastName: Joi.string().min(2).max(80),
-                phoneNum: Joi.number().min(1),
+                phoneNum: Joi.string().regex(/^\+\d{11,20}$/).required(),
             }).validate({firstName, lastName, phoneNum});
 
             if (validate.error) {

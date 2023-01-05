@@ -17,6 +17,9 @@ export default class BasketController {
                 }]
             });
 
+            basket.totalPrice = +basket.quantity * +basket.product.price;
+            basket.itemPrice = +basket.product.price;
+
             res.json({
                 status: "ok",
                 basket: basket || {},
@@ -52,12 +55,9 @@ export default class BasketController {
 
             if(!_.isEmpty(existBasket)){
                 quantity = +existBasket.quantity + +quantity;
-                const totalPrice = +prod.price * quantity;
 
                 const updatedItem = Basket.update({
-                    quantity,
-                    totalPrice,
-                    itemPrice: prod.price
+                    quantity
                 }, {where: {id: existBasket.id}})
 
                 res.json({
@@ -67,15 +67,10 @@ export default class BasketController {
                 return;
             }
 
-            const itemPrice = +prod.price;
-            const totalPrice = itemPrice * +quantity;
-
             const addedProd = await Basket.create({
                 userId,
                 productId,
-                quantity,
-                itemPrice,
-                totalPrice
+                quantity
             });
 
             res.json({
@@ -113,12 +108,8 @@ export default class BasketController {
                 throw HttpError(403, 'Invalid id!');
             }
 
-            const totalPrice = +quantity * +basketProduct.product.price;
-
             const updatedItem = Basket.update({
-                quantity,
-                totalPrice,
-                itemPrice: basketProduct.product.price
+                quantity
             }, {where: {id}})
 
             res.json({

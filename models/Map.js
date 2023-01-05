@@ -12,7 +12,7 @@ class Map extends Model {
         const sameSlugNameMaps = await Map.findAll({where: {slugName}});
 
         if(sameSlugNameMaps.length){
-            slugName = slugName + '-' + sameSlugNameMaps.length;
+            return '-';
         }
 
         return slugName;

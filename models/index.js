@@ -8,3 +8,4 @@ export {default as Products} from "./Products";
 export {default as News} from "./News";
 export {default as Map} from "./Map";
 export {default as MapImages} from "./MapImages";
+export {default as ProdCatRel} from "./ProdCatRel";

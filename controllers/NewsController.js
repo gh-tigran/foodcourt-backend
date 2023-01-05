@@ -79,6 +79,10 @@ export default class NewsController {
             const filePath = path.join('files', uuidV4() + '-' + file.originalname);
             const slugName = await News.generateSlug(title);
 
+            if(slugName === '-'){
+                throw HttpError(403, 'Invalid title');
+            }
+
             fs.renameSync(file.path, News.getImgPath(filePath));
 
             const createdNews = await News.create({
@@ -126,6 +130,10 @@ export default class NewsController {
 
             if(title && title !== updatingNews.title){
                 slugNameUpdate = await News.generateSlug(title);
+
+                if(slugNameUpdate === '-'){
+                    throw HttpError(403, 'Invalid title');
+                }
             }
 
             if(!_.isEmpty(file) && ['image/png', 'image/jpeg'].includes(file.mimetype)){

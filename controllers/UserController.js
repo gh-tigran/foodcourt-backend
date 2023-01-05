@@ -1,4 +1,4 @@
-import {Users} from "../models";
+import {Admin, Users} from "../models";
 import jwt from "jsonwebtoken";
 import HttpError from "http-errors";
 import Joi from "joi";
@@ -18,7 +18,7 @@ class UserController {
                 firstName: Joi.string().min(2).max(80).required(),
                 lastName: Joi.string().min(2).max(80).required(),
                 email: Joi.string().min(2).max(50).required(),
-                phoneNum: Joi.number().min(1).required(),
+                phoneNum: Joi.string().regex(/^\+\d{11,20}$/).required(),
                 password: Joi.string().min(8).max(50).required(),
                 confirmPassword: Joi.string().min(8).max(50).required(),
             }).validate({firstName, lastName, email, phoneNum, password, confirmPassword});
@@ -34,7 +34,11 @@ class UserController {
             const existsUser = await Users.findOne({ where: {email} });
 
             if (existsUser) {
-                throw HttpError(403, `Email already registered`);
+                if(existsUser.status === "deleted"){
+                    await Users.destroy({where: {id: existsUser.id}});
+                }else{
+                    throw HttpError(403, {email: `User from this email already registered`});
+                }
             }
 
             const confirmToken = uuidV4();
@@ -212,7 +216,7 @@ class UserController {
             const validate = Joi.object({
                 firstName: Joi.string().min(2).max(80),
                 lastName: Joi.string().min(2).max(80),
-                phoneNum: Joi.number().min(1),
+                phoneNum: Joi.string().regex(/^\+\d{11,20}$/).required(),
             }).validate({firstName, lastName, phoneNum});
 
             if (validate.error) {

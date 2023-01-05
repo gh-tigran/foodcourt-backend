@@ -1,4 +1,4 @@
-import {Offers} from "../models";
+import {Basket, Categories, ProdCatRel, Products} from "../models";
 import path from "path";
 import fs from "fs";
 import {v4 as uuidV4} from "uuid";
@@ -10,9 +10,16 @@ export default class OffersController {
     static getOffers = async (req, res, next) => {
         try {
             const {title} = req.query;
-            const where = title ? {title: { $like: `%${title}%` }} : {};
+            const where = title ? {type: 'offer', title: { $like: `%${title}%` }} : {type: 'offer'};
 
-            const offers = await Offers.findAll({where});
+            const offers = await Products.findAll({
+                where,
+                include: [{
+                    model: Categories,
+                    as: 'categories',
+                    required: true
+                }]
+            });
 
             res.json({
                 status: "ok",
@@ -35,7 +42,14 @@ export default class OffersController {
                 throw HttpError(403, validate.error);
             }
 
-            const offer = await Offers.findOne({where: {slugName}});
+            const offer = await Products.findOne({
+                where: {slugName},
+                include: [{
+                    model: Categories,
+                    as: 'categories',
+                    required: true
+                }]
+            });
 
             res.json({
                 status: "ok",
@@ -49,33 +63,53 @@ export default class OffersController {
     static createOffer = async (req, res, next) => {
         try {
             const {file} = req;
-            const {title, description, price} = req.body;
+            const {title, description, price, categoryId} = req.body;
 
             const validate = Joi.object({
                 title: Joi.string().min(2).max(80).required(),
                 description: Joi.string().min(2).max(3000).required(),
-                price: Joi.number().min(10).max(50000).required(),
-            }).validate({title, description, price});
+                price: Joi.number().min(10).max(1000000).required(),
+                categoryId: Joi.array().items(Joi.number().min(1)).required(),
+            }).validate({title, description, price, categoryId});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
             }
 
-            if(_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)){
+            if (_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)) {
                 throw HttpError(403, "Doesn't sent image!");
             }
 
             const filePath = path.join('files', uuidV4() + '-' + file.originalname);
-            const slugName = await Offers.generateSlug(title);
 
-            fs.renameSync(file.path, Offers.getImgPath(filePath));
+            fs.renameSync(file.path, Products.getImgPath(filePath));
 
-            const createdOffer = await Offers.create({
+            const slugName = await Products.generateSlug(title);
+
+            if(slugName === '-'){
+                throw HttpError(403, 'Invalid title');
+            }
+
+            const createdOffer = await Products.create({
                 imagePath: filePath,
-                slugName,
                 title,
                 description,
                 price,
+                slugName,
+                type: 'offer'
+            });
+
+            categoryId.forEach(id => {
+                (async () => {
+                    const cat = await Categories.findOne({where: {id}});
+
+                    if (!_.isEmpty(cat)) {
+                        await ProdCatRel.create({
+                            productId: createdOffer.id,
+                            categoryId: cat.id,
+                        });
+                    }
+                })()
             });
 
             res.json({
@@ -94,41 +128,60 @@ export default class OffersController {
         try {
             const {file} = req;
             const {slugName} = req.params;
-            const {title, description, price} = req.body;
+            const {title, description, price, categoryId} = req.body;
 
             const validate = Joi.object({
                 slugName: Joi.string().min(2).max(80).required(),
                 title: Joi.string().min(2).max(80),
                 description: Joi.string().min(2).max(3000),
-                price: Joi.number().min(10).max(50000),
-            }).validate({slugName, title, description, price});
+                price: Joi.number().min(10).max(1000000),
+                categoryId: Joi.array().items(Joi.number().min(1)),
+            }).validate({slugName, title, description, price, categoryId});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
             }
 
-            const updatingOffer = await Offers.findOne({where: {slugName}});
+            const updatingOffer = await Products.findOne({where: {slugName}});
             let slugNameUpdate = '';
             let filePath = '';
 
             if (_.isEmpty(updatingOffer)) {
-                throw HttpError(404, "Not found offer from that slugName");
+                throw HttpError(404, "Not found offer from that slagName");
             }
 
-            if(title && title !== updatingOffer.title){
-                slugNameUpdate = await Offers.generateSlug(title);
+            if (!_.isEmpty(categoryId)) {
+                await ProdCatRel.destroy({where: {productId: updatingOffer.id}});
+
+                categoryId.forEach(id => {
+                    (async () => {
+                        await ProdCatRel.create({
+                            productId: updatingOffer.id,
+                            categoryId: id
+                        })
+                    })()
+                });
             }
 
-            if(!_.isEmpty(file) && ['image/png', 'image/jpeg'].includes(file.mimetype)){
-                const updateImgPath = Offers.getImgPath(updatingOffer.imagePath);
+            if (title && title !== updatingOffer.title) {
+                slugNameUpdate = await Products.generateSlug(title);
+
+                if(slugNameUpdate === '-'){
+                    throw HttpError(403, 'Invalid title');
+                }
+            }
+
+            if (!_.isEmpty(file) && ['image/png', 'image/jpeg'].includes(file.mimetype)) {
                 filePath = path.join('files', uuidV4() + '-' + file.originalname);
 
-                fs.renameSync(file.path, Offers.getImgPath(filePath));
+                fs.renameSync(file.path, Products.getImgPath(filePath));
 
-                if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath);
+                const updateImgPath = Products.getImgPath(updatingOffer.imagePath);
+
+                if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath)
             }
 
-            const updatedOffer = await Offers.update({
+            const updatedOffer = await Products.update({
                 imagePath: filePath || updatingOffer.imagePath,
                 slugName: slugNameUpdate || slugName,
                 title,
@@ -160,17 +213,19 @@ export default class OffersController {
                 throw HttpError(403, validate.error);
             }
 
-            const deletingOffer = await Offers.findOne({where: {slugName}});
+            const deletingOffer = await Products.findOne({where: {slugName}});
 
-            if(_.isEmpty(deletingOffer)){
-                throw HttpError(404, "Not found product from that slugName");
+            if (_.isEmpty(deletingOffer)) {
+                throw HttpError(404, "Not found offer from that slug name");
             }
 
-            const delImgPath = Offers.getImgPath(deletingOffer.imagePath);
+            const delImgPath = Products.getImgPath(deletingOffer.imagePath);
 
             if (fs.existsSync(delImgPath)) fs.unlinkSync(delImgPath)
 
-            const deletedOffer = await Offers.destroy({where: {slugName}});
+            await ProdCatRel.destroy({where: {productId: deletingOffer.id}});
+
+            const deletedOffer = await Products.destroy({where: {slugName}});
 
             res.json({
                 status: "ok",
@@ -180,60 +235,4 @@ export default class OffersController {
             next(e);
         }
     };
-
-    // static updateOffer = async (req, res, next) => {
-    //     try {
-    //         const {file} = req;
-    //         const {slugName} = req.params;
-    //         const {title, description, price} = req.body;
-    //
-    //         const validate = Joi.object({
-    //             slugName: Joi.string().min(2).max(80).required(),
-    //             title: Joi.string().min(2).max(80).required(),
-    //             description: Joi.string().min(2).max(3000).required(),
-    //             price: Joi.number().min(10).max(50000).required(),
-    //         }).validate({slugName, title, description, price});
-    //
-    //         if (validate.error) {
-    //             throw HttpError(403, validate.error);
-    //         }
-    //
-    //         if(_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)){
-    //             throw HttpError(403, "Doesn't sent image!");
-    //         }
-    //
-    //         const updatingOffer = await Offers.findOne({where: {slugName}});
-    //
-    //         if (_.isEmpty(updatingOffer)) {
-    //             throw HttpError(404, "Not found offer from that slugName");
-    //         }
-    //
-    //         const updateImgPath = Offers.getImgPath(updatingOffer.imagePath);
-    //         const filePath = path.join('files', uuidV4() + '-' + file.originalname);
-    //
-    //         fs.renameSync(file.path, Offers.getImgPath(filePath));
-    //
-    //         if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath);
-    //
-    //         const slugNameUpdate = await Offers.generateSlug(title);
-    //
-    //         const updatedOffer = await Offers.update({
-    //             imagePath: filePath,
-    //             slugName: slugNameUpdate,
-    //             title,
-    //             description,
-    //             price,
-    //         }, {where: {slugName}});
-    //
-    //         res.json({
-    //             status: "ok",
-    //             updatedOffer
-    //         })
-    //     } catch (e) {
-    //         if (!_.isEmpty(req.file) && fs.existsSync(req.file.path)) {
-    //             fs.unlinkSync(req.file.path);
-    //         }
-    //         next(e);
-    //     }
-    // }
 }

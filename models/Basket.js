@@ -24,15 +24,7 @@ Basket.init({
     quantity: {
         type: DataTypes.INTEGER().UNSIGNED,
         allowNull: false,
-    },
-    itemPrice: {
-        type: DataTypes.INTEGER().UNSIGNED,
-        allowNull: false,
-    },
-    totalPrice: {
-        type: DataTypes.INTEGER().UNSIGNED,
-        allowNull: false,
-    },
+    }
 }, {
     sequelize,
     modelName: 'basket',

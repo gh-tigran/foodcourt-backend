@@ -1,4 +1,4 @@
-import {Basket, Categories, Products} from "../models";
+import {Categories, ProdCatRel, Products} from "../models";
 import path from "path";
 import fs from "fs";
 import {v4 as uuidV4} from "uuid";
@@ -10,21 +10,38 @@ export default class ProductsController {
     static getProducts = async (req, res, next) => {
         try {
             let {order = 0, page = 1, limit = 10, title = ''} = req.query;
+
+            const validate = Joi.object({
+                order: Joi.number().valid(0, 1, 2, 3),
+                page: Joi.number().min(0),
+                limit: Joi.number().min(0).max(30),
+                title: Joi.string().min(0),
+            }).validate({order, page, limit, title});
+
+            if (validate.error) {
+                throw HttpError(403, validate.error);
+            }
+
             page = +page;
             limit = +limit;
             const offset = (page - 1) * limit;
             const orderTypes = Products.getOrderTypes();
-            const where = title ? {title: { $like: `%${title}%` }} : {};
-            const count = await Products.count({where});
-            const totalPages = Math.ceil(count / limit);
+            const where = title ? {title: {$like: `%${title}%`}} : {};
+            const include = [{
+                model: Categories,
+                as: 'categories',
+            }];
+
+            const count = await Products.findAll({
+                where,
+                include,
+                attributes: [],
+            });
+            const totalPages = Math.ceil(count.length / limit);
 
             const products = await Products.findAll({
                 where,
-                include: [{
-                    model: Categories,
-                    as: 'category',
-                    required: true,
-                }],
+                include,
                 order: [
                     [
                         orderTypes[order].orderBy,
@@ -51,30 +68,40 @@ export default class ProductsController {
 
     static getProductsByCategory = async (req, res, next) => {
         try {
+            let {order = 0, page = 1, limit = 10, title = ''} = req.query;
             const {categorySlug} = req.params;
-            let {order = 0, page = 1, limit = 10} = req.query;
-            page = +page;
-            limit = +limit;
-            const offset = (page - 1) * limit;
-            const count = await Products.count();
-            const totalPages = Math.ceil(count / limit);
-            const orderTypes = Products.getOrderTypes();
 
             const validate = Joi.object({
+                order: Joi.number().valid(0, 1, 2, 3),
+                page: Joi.number().min(0),
+                limit: Joi.number().min(0).max(30),
+                title: Joi.string().min(0),
                 categorySlug: Joi.string().min(2).max(80).required(),
-            }).validate({categorySlug});
+            }).validate({order, page, limit, title, categorySlug});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
             }
 
+            page = +page;
+            limit = +limit;
+            const offset = (page - 1) * limit;
+            const where = title ? {title: {$like: `%${title}%`}} : {};
+            const include = [{
+                model: Categories,
+                as: 'categories',
+                required: true,
+                where: {
+                    slugName: categorySlug
+                }
+            }];
+            const count = await Products.findAll({where, include, attributes: []});
+            const totalPages = Math.ceil(count.length / limit);
+            const orderTypes = Products.getOrderTypes();
+
             const products = await Products.findAll({
-                where: {categorySlug},
-                include: [{
-                    model: Categories,
-                    as: 'category',
-                    required: true,
-                }],
+                where,
+                include,
                 order: [
                     [
                         orderTypes[order].orderBy,
@@ -117,7 +144,7 @@ export default class ProductsController {
                 where: {slugName},
                 include: [{
                     model: Categories,
-                    as: 'category',
+                    as: 'categories',
                     required: true,
                 }]
             });
@@ -134,27 +161,20 @@ export default class ProductsController {
     static createProduct = async (req, res, next) => {
         try {
             const {file} = req;
-            const {title, description, price, categorySlug} = req.body;
-
+            const {title, description, price, categoryId} = req.body;
 
             const validate = Joi.object({
                 title: Joi.string().min(2).max(80).required(),
                 description: Joi.string().min(2).max(3000).required(),
                 price: Joi.number().min(10).max(1000000).required(),
-                categorySlug: Joi.string().min(2).max(80).required(),
-            }).validate({title, description, price, categorySlug});
+                categoryId: Joi.array().items(Joi.number().min(1)).required(),
+            }).validate({title, description, price, categoryId});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
             }
 
-            const category = await Categories.findOne({where: {slugName: categorySlug}});
-
-            if (_.isEmpty(category)) {
-                throw HttpError(403, "Category from that slug doesn't exist");
-            }
-
-            if(_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)){
+            if (_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)) {
                 throw HttpError(403, "Doesn't sent image!");
             }
 
@@ -164,14 +184,30 @@ export default class ProductsController {
 
             const slugName = await Products.generateSlug(title);
 
+            if(slugName === '-'){
+                throw HttpError(403, 'Invalid title');
+            }
+
             const createdProduct = await Products.create({
                 imagePath: filePath,
-                categoryId: category.id,
                 title,
                 description,
                 price,
                 slugName,
-                categorySlug,
+                type: 'product'
+            });
+
+            categoryId.forEach(id => {
+                (async () => {
+                    const cat = await Categories.findOne({where: {id}});
+
+                    if (!_.isEmpty(cat)) {
+                        await ProdCatRel.create({
+                            productId: createdProduct.id,
+                            categoryId: cat.id,
+                        });
+                    }
+                })()
             });
 
             res.json({
@@ -190,15 +226,15 @@ export default class ProductsController {
         try {
             const {file} = req;
             const {slugName} = req.params;
-            const {title, description, price, categorySlug} = req.body;
+            const {title, description, price, categoryId} = req.body;
 
             const validate = Joi.object({
                 slugName: Joi.string().min(2).max(80).required(),
                 title: Joi.string().min(2).max(80),
                 description: Joi.string().min(2).max(3000),
                 price: Joi.number().min(10).max(1000000),
-                categorySlug: Joi.string().min(2).max(80),
-            }).validate({slugName, title, description, price, categorySlug});
+                categoryId: Joi.array().items(Joi.number().min(1)),
+            }).validate({slugName, title, description, price, categoryId});
 
             if (validate.error) {
                 throw HttpError(403, validate.error);
@@ -207,25 +243,33 @@ export default class ProductsController {
             const updatingProduct = await Products.findOne({where: {slugName}});
             let slugNameUpdate = '';
             let filePath = '';
-            let category = {};
 
             if (_.isEmpty(updatingProduct)) {
                 throw HttpError(404, "Not found product from that slagName");
             }
 
-            if(categorySlug){
-                category = await Categories.findOne({where: {slugName: categorySlug}});
+            if (!_.isEmpty(categoryId)) {
+                await ProdCatRel.destroy({where: {productId: updatingProduct.id}});
 
-                if (_.isEmpty(category)) {
-                    throw HttpError(403, "Category from that slug doesn't exist");
+                categoryId.forEach(id => {
+                    (async () => {
+                        await ProdCatRel.create({
+                            productId: updatingProduct.id,
+                            categoryId: id
+                        })
+                    })()
+                })
+            }
+
+            if (title && title !== updatingProduct.title) {
+                slugNameUpdate = await Products.generateSlug(title);
+
+                if(slugNameUpdate === '-'){
+                    throw HttpError(403, 'Invalid title');
                 }
             }
 
-            if(title && title !== updatingProduct.title){
-                slugNameUpdate = await Products.generateSlug(title);
-            }
-
-            if(!_.isEmpty(file) && ['image/png', 'image/jpeg'].includes(file.mimetype)){
+            if (!_.isEmpty(file) && ['image/png', 'image/jpeg'].includes(file.mimetype)) {
                 filePath = path.join('files', uuidV4() + '-' + file.originalname);
 
                 fs.renameSync(file.path, Products.getImgPath(filePath));
@@ -238,25 +282,10 @@ export default class ProductsController {
             const updatedProduct = await Products.update({
                 imagePath: filePath || updatingProduct.imagePath,
                 slugName: slugNameUpdate || slugName,
-                categoryId: category.id || updatingProduct.categoryId,
                 title,
                 description,
                 price,
-                categorySlug
-            }, {where: {slugName},});
-
-            if(price){
-                const basketProd = await Basket.findOne({where: {productId: updatingProduct.id}});
-
-                if(!_.isEmpty(basketProd)){
-                    const totalPrice = +price * +basketProd.quantity;
-
-                    await Basket.update({
-                        itemPrice: price,
-                        totalPrice,
-                    }, {where: {id: basketProd.id}})
-                }
-            }
+            }, {where: {slugName}});
 
             res.json({
                 status: "ok",
@@ -285,12 +314,14 @@ export default class ProductsController {
             const deletingProduct = await Products.findOne({where: {slugName}});
 
             if (_.isEmpty(deletingProduct)) {
-                throw HttpError(404, "Not found product from that id");
+                throw HttpError(404, "Not found product from that slug name");
             }
 
             const delImgPath = Products.getImgPath(deletingProduct.imagePath);
 
             if (fs.existsSync(delImgPath)) fs.unlinkSync(delImgPath)
+
+            await ProdCatRel.destroy({where: {productId: deletingProduct.id}});
 
             const deletedProduct = await Products.destroy({where: {slugName}});
 
@@ -302,71 +333,4 @@ export default class ProductsController {
             next(e);
         }
     };
-
-    // static updateProduct = async (req, res, next) => {
-    //     try {
-    //         const {file} = req;
-    //         const {slugName} = req.params;
-    //         const {title, description, price, categorySlug} = req.body;
-    //
-    //
-    //         const validate = Joi.object({
-    //             slugName: Joi.string().min(2).max(80).required(),
-    //             title: Joi.string().min(2).max(80).required(),
-    //             description: Joi.string().min(2).max(3000).required(),
-    //             price: Joi.number().min(10).max(50000).required(),
-    //             categorySlug: Joi.string().min(2).max(80).required(),
-    //         }).validate({slugName, title, description, price, categorySlug});
-    //
-    //         if (validate.error) {
-    //             throw HttpError(403, validate.error);
-    //         }
-    //
-    //         const category = await Categories.findOne({where: {slugName: categorySlug}});
-    //
-    //         if (_.isEmpty(category)) {
-    //             throw HttpError(403, "Category from that slug doesn't exist");
-    //         }
-    //
-    //         if(_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)){
-    //             throw HttpError(403, "Doesn't sent image!");
-    //         }
-    //
-    //         const updatingProduct = await Products.findOne({where: {slugName}});
-    //
-    //         if (_.isEmpty(updatingProduct)) {
-    //             throw HttpError(404, "Not found product from that slagName");
-    //         }
-    //
-    //         const filePath = path.join('files', uuidV4() + '-' + file.originalname);
-    //
-    //         fs.renameSync(file.path, Products.getImgPath(filePath));
-    //
-    //         const updateImgPath = Products.getImgPath(updatingProduct.imagePath);
-    //
-    //         if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath)
-    //
-    //         const slugNameUpdate = await Products.generateSlug(title);
-    //
-    //         const updatedProduct = await Products.update({
-    //             imagePath: filePath,
-    //             slugName: slugNameUpdate,
-    //             categoryId: category.id,
-    //             title,
-    //             description,
-    //             price,
-    //             categorySlug
-    //         }, {where: {slugName},});
-    //
-    //         res.json({
-    //             status: "ok",
-    //             updatedProduct
-    //         })
-    //     } catch (e) {
-    //         if (!_.isEmpty(req.file) && fs.existsSync(req.file.path)) {
-    //             fs.unlinkSync(req.file.path);
-    //         }
-    //         next(e);
-    //     }
-    // }
 }

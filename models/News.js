@@ -12,7 +12,7 @@ class News extends Model {
         const sameSlugNameNews = await News.findAll({where: {slugName}});
 
         if(sameSlugNameNews.length){
-            slugName = slugName + '-' + sameSlugNameNews.length;
+            return '-';
         }
 
         return slugName;

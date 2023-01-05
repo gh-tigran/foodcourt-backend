@@ -89,6 +89,10 @@ export default class MapController {
 
             const slugName = await Map.generateSlug(location);
 
+            if(slugName === '-'){
+                throw HttpError(403, 'Invalid location');
+            }
+
             const createdBranch = await Map.create({lat, lon, title, slugName, location});
 
             const filesData = files.map(file => {
@@ -170,6 +174,10 @@ export default class MapController {
 
             if (location && location !== oldBranch.location) {
                 slugNameUpdate = await Map.generateSlug(location);
+
+                if(slugNameUpdate === '-'){
+                    throw HttpError(403, 'Invalid location');
+                }
             }
 
             if (!_.isEmpty(files)) {

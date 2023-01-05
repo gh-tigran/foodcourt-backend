@@ -12,7 +12,7 @@ class Categories extends Model {
         const sameSlugNameCategories = await Categories.findAll({where: {slugName}});
 
         if(sameSlugNameCategories.length){
-            slugName = slugName + '-' + sameSlugNameCategories.length;
+            return '-';
         }
 
         return slugName;

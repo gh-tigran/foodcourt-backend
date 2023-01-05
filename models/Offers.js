@@ -12,7 +12,7 @@ class Offers extends Model {
         const sameSlugNameOffers = await Offers.findAll({where: {slugName}});
 
         if(sameSlugNameOffers.length){
-            slugName = slugName + '-' + sameSlugNameOffers.length;
+            return '-';
         }
 
         return slugName;
