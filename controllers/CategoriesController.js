@@ -5,6 +5,7 @@ import {v4 as uuidV4} from "uuid";
 import HttpError from "http-errors";
 import _ from "lodash";
 import Joi from "joi";
+import Validator from "../middlewares/Validator";
 
 export default class CategoriesController {
     static getCategories = async (req, res, next) => {
@@ -28,11 +29,11 @@ export default class CategoriesController {
             const {slugName} = req.params;
 
             const validate = Joi.object({
-                slugName: Joi.string().min(2).max(80).required(),
+                slugName: Validator.shortText(true),
             }).validate({slugName});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             const category = await Categories.findOne({where: {slugName}});
@@ -52,15 +53,15 @@ export default class CategoriesController {
             const {name} = req.body;
 
             const validate = Joi.object({
-                name: Joi.string().min(4).max(80).required(),
+                name: Validator.shortText(true),
             }).validate({name});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             if (_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)) {
-                throw HttpError(403, "Doesn't sent Image!");
+                throw HttpError(422, "Doesn't sent Image!");
             }
 
             const filePath = path.join('files', uuidV4() + '-' + file.originalname);
@@ -97,12 +98,12 @@ export default class CategoriesController {
             const {name} = req.body;
 
             const validate = Joi.object({
-                slugName: Joi.string().min(2).max(80).required(),
-                name: Joi.string().min(2).max(80),
+                slugName: Validator.shortText(true),
+                name: Validator.shortText(false),
             }).validate({slugName, name});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             const updatingCategory = await Categories.findOne({where: {slugName}});
@@ -111,7 +112,7 @@ export default class CategoriesController {
             let imagePath;
 
             if (_.isEmpty(updatingCategory)) {
-                throw HttpError(404, "Not found category from that slug");
+                throw HttpError(403, "Not found category from that slug");
             }
 
             if (!_.isEmpty(file) && ['image/png', 'image/jpeg'].includes(file.mimetype)) {
@@ -149,29 +150,29 @@ export default class CategoriesController {
 
     static deleteCategory = async (req, res, next) => {
         try {
-            const {slugName} = req.params;
+            const {id} = req.params;
 
             const validate = Joi.object({
-                slugName: Joi.string().min(2).max(80).required(),
-            }).validate({slugName});
+                id: Validator.numGreatOne(true),
+            }).validate({id});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
-            const deletingCategory = await Categories.findOne({where: {slugName}});
+            const deletingCategory = await Categories.findOne({where: {id}});
 
             if (_.isEmpty(deletingCategory)) {
-                throw HttpError(404, "Not found category from that slug");
+                throw HttpError(403, "Not found category from that slug");
             }
 
             const delImgPath = Categories.getImgPath(deletingCategory.imagePath);
 
             if (fs.existsSync(delImgPath)) fs.unlinkSync(delImgPath);
 
-            await ProdCatRel.destroy({where: {categoryId: deletingCategory.id}});
+            await ProdCatRel.destroy({where: {categoryId: id}});
 
-            const deletedCategory = await Categories.destroy({where: {slugName}});
+            const deletedCategory = await Categories.destroy({where: {id}});
 
             res.json({
                 status: "ok",

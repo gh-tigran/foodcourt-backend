@@ -5,21 +5,29 @@ import {v4 as uuidV4} from "uuid";
 import HttpError from "http-errors";
 import _ from "lodash";
 import Joi from "joi";
+import Validator from "../middlewares/Validator";
 
 export default class ProductsController {
     static getProducts = async (req, res, next) => {
         try {
-            let {order = 0, page = 1, limit = 10, title = ''} = req.query;
+            let {
+                order = 0,
+                page = 1,
+                limit = 10,
+                title = '',
+                category
+            } = req.query;
+            title = title || undefined;
 
             const validate = Joi.object({
                 order: Joi.number().valid(0, 1, 2, 3),
-                page: Joi.number().min(0),
-                limit: Joi.number().min(0).max(30),
-                title: Joi.string().min(0),
+                page: Validator.numGreatOne(false),
+                limit: Validator.numGreatOne(false),
+                title: Validator.shortText(false),
             }).validate({order, page, limit, title});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             page = +page;
@@ -27,21 +35,34 @@ export default class ProductsController {
             const offset = (page - 1) * limit;
             const orderTypes = Products.getOrderTypes();
             const where = title ? {title: {$like: `%${title}%`}} : {};
-            const include = [{
-                model: Categories,
-                as: 'categories',
-            }];
 
             const count = await Products.findAll({
                 where,
-                include,
-                attributes: [],
+                include: [{
+                    model: Categories,
+                    as: 'categories',
+                    where: category ? {
+                        id: category
+                    } : null
+                }],
             });
             const totalPages = Math.ceil(count.length / limit);
 
             const products = await Products.findAll({
-                where,
-                include,
+                where: {
+                    ...where,
+                    $or: [
+                        ...count.map(prod => {
+                            return {
+                                id: prod.id
+                            }
+                        })
+                    ]
+                },
+                include: [{
+                    model: Categories,
+                    as: 'categories',
+                }],
                 order: [
                     [
                         orderTypes[order].orderBy,
@@ -68,19 +89,25 @@ export default class ProductsController {
 
     static getProductsByCategory = async (req, res, next) => {
         try {
-            let {order = 0, page = 1, limit = 10, title = ''} = req.query;
+            let {
+                order = 0,
+                page = 1,
+                limit = 10,
+                title = ''
+            } = req.query;
             const {categorySlug} = req.params;
+            title = title || undefined;
 
             const validate = Joi.object({
                 order: Joi.number().valid(0, 1, 2, 3),
-                page: Joi.number().min(0),
-                limit: Joi.number().min(0).max(30),
-                title: Joi.string().min(0),
-                categorySlug: Joi.string().min(2).max(80).required(),
+                page: Validator.numGreatOne(false),
+                limit: Validator.numGreatOne(false),
+                title: Validator.shortText(false),
+                categorySlug: Validator.shortText(true),
             }).validate({order, page, limit, title, categorySlug});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             page = +page;
@@ -133,11 +160,11 @@ export default class ProductsController {
             const {slugName} = req.params;
 
             const validate = Joi.object({
-                slugName: Joi.string().min(2).max(80).required(),
+                slugName: Validator.shortText(true),
             }).validate({slugName});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             const product = await Products.findOne({
@@ -164,18 +191,18 @@ export default class ProductsController {
             const {title, description, price, categoryId} = req.body;
 
             const validate = Joi.object({
-                title: Joi.string().min(2).max(80).required(),
-                description: Joi.string().min(2).max(3000).required(),
-                price: Joi.number().min(10).max(1000000).required(),
-                categoryId: Joi.array().items(Joi.number().min(1)).required(),
+                title: Validator.shortText(true),
+                description: Validator.longText(true),
+                price: Validator.numGreatOne(true),
+                categoryId: Validator.idArray(true),
             }).validate({title, description, price, categoryId});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             if (_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)) {
-                throw HttpError(403, "Doesn't sent image!");
+                throw HttpError(422, "Doesn't sent image!");
             }
 
             const filePath = path.join('files', uuidV4() + '-' + file.originalname);
@@ -229,15 +256,15 @@ export default class ProductsController {
             const {title, description, price, categoryId} = req.body;
 
             const validate = Joi.object({
-                slugName: Joi.string().min(2).max(80).required(),
-                title: Joi.string().min(2).max(80),
-                description: Joi.string().min(2).max(3000),
-                price: Joi.number().min(10).max(1000000),
-                categoryId: Joi.array().items(Joi.number().min(1)),
+                slugName: Validator.shortText(true),
+                title: Validator.shortText(false),
+                description: Validator.longText(false),
+                price: Validator.numGreatOne(false),
+                categoryId: Validator.idArray(false),
             }).validate({slugName, title, description, price, categoryId});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             const updatingProduct = await Products.findOne({where: {slugName}});
@@ -245,7 +272,7 @@ export default class ProductsController {
             let filePath = '';
 
             if (_.isEmpty(updatingProduct)) {
-                throw HttpError(404, "Not found product from that slagName");
+                throw HttpError(403, "Not found product from that slagName");
             }
 
             if (!_.isEmpty(categoryId)) {
@@ -301,29 +328,29 @@ export default class ProductsController {
 
     static deleteProduct = async (req, res, next) => {
         try {
-            const {slugName} = req.params;
+            const {id} = req.params;
 
             const validate = Joi.object({
-                slugName: Joi.string().min(2).max(80).required(),
-            }).validate({slugName});
+                id: Validator.numGreatOne(true),
+            }).validate({id});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
-            const deletingProduct = await Products.findOne({where: {slugName}});
+            const deletingProduct = await Products.findOne({where: {id}});
 
             if (_.isEmpty(deletingProduct)) {
-                throw HttpError(404, "Not found product from that slug name");
+                throw HttpError(403, "Not found product from that slug name");
             }
 
             const delImgPath = Products.getImgPath(deletingProduct.imagePath);
 
             if (fs.existsSync(delImgPath)) fs.unlinkSync(delImgPath)
 
-            await ProdCatRel.destroy({where: {productId: deletingProduct.id}});
+            await ProdCatRel.destroy({where: {productId: id}});
 
-            const deletedProduct = await Products.destroy({where: {slugName}});
+            const deletedProduct = await Products.destroy({where: {id}});
 
             res.json({
                 status: "ok",

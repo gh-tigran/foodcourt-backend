@@ -36,11 +36,16 @@ Users.init({
         allowNull: false,
     },
     phoneNum: {
-        type: DataTypes.STRING(25),
+        type: DataTypes.STRING(),
         allowNull: false,
+        validate: {
+            validator: function(v) {
+                return /^\d{11,}$/.test(v);
+            },
+        }
     },
     status: {
-        type: DataTypes.ENUM('active', 'pending', 'deleted'),
+        type: DataTypes.ENUM('active', 'pending', 'deleted', 'blocked'),
         allowNull: false,
         defaultValue: 'pending'
     },

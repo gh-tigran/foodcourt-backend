@@ -5,11 +5,24 @@ import {v4 as uuidV4} from "uuid";
 import HttpError from "http-errors";
 import _ from "lodash";
 import Joi from "joi";
+import Validator from "../middlewares/Validator";
 
 export default class NewsController {
     static getNews = async (req, res, next) => {
         try {
             let {page = 1, limit = 10, title = ''} = req.query;
+            if(!title) title = undefined;
+
+            const validate = Joi.object({
+                page: Validator.numGreatOne(true),
+                limit: Validator.numGreatOne(true),
+                title: Validator.shortText(false),
+            }).validate({page, limit, title});
+
+            if (validate.error) {
+                throw HttpError(422, validate.error);
+            }
+
             page = +page;
             limit = +limit;
             const offset = (page - 1) * limit;
@@ -40,11 +53,11 @@ export default class NewsController {
             const {slugName} = req.params;
 
             const validate = Joi.object({
-                slugName: Joi.string().min(2).max(80).required(),
+                slugName: Validator.shortText(true),
             }).validate({slugName});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             const singleNews = await News.findOne({where: {slugName}});
@@ -64,12 +77,12 @@ export default class NewsController {
             const {title, description} = req.body;
 
             const validate = Joi.object({
-                title: Joi.string().min(2).max(80).required(),
-                description: Joi.string().min(2).max(3000).required()
+                title: Validator.shortText(true),
+                description: Validator.longText(true),
             }).validate({title, description});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             if(_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)){
@@ -111,13 +124,13 @@ export default class NewsController {
             const {title, description} = req.body;
 
             const validate = Joi.object({
-                slugName: Joi.string().min(2).max(80).required(),
-                title: Joi.string().min(2).max(80),
-                description: Joi.string().min(2).max(3000),
+                slugName: Validator.shortText(true),
+                title: Validator.shortText(true),
+                description: Validator.longText(true),
             }).validate({slugName, title, description});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             const updatingNews = await News.findOne({where: {slugName}});
@@ -125,7 +138,7 @@ export default class NewsController {
             let filePath = '';
 
             if (_.isEmpty(updatingNews)) {
-                throw HttpError(404, "Not found product from that slugName");
+                throw HttpError(403, "Not found product from that slugName");
             }
 
             if(title && title !== updatingNews.title){
@@ -166,24 +179,24 @@ export default class NewsController {
 
     static deleteNews = async (req, res, next) => {
         try {
-            const {slugName} = req.params;
+            const {id} = req.params;
 
             const validate = Joi.object({
-                slugName: Joi.string().min(2).max(80).required(),
-            }).validate({slugName});
+                id: Validator.numGreatOne(true),
+            }).validate({id});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
-            const deletingNews = await News.findOne({where: {slugName}});
+            const deletingNews = await News.findOne({where: {id}});
 
             if (_.isEmpty(deletingNews)) {
-                throw HttpError(404, "Not found product from that slugName");
+                throw HttpError(403, "Not found product from that slugName");
             }
 
             const delImgPath = News.getImgPath(deletingNews.imagePath);
-            const deletedNews = await News.destroy({where: {slugName}});
+            const deletedNews = await News.destroy({where: {id}});
 
             if (fs.existsSync(delImgPath)) fs.unlinkSync(delImgPath)
 

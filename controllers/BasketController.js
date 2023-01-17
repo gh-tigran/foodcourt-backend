@@ -2,6 +2,7 @@ import {Basket, Products} from "../models";
 import HttpError from "http-errors";
 import _ from "lodash";
 import Joi from "joi";
+import Validator from "../middlewares/Validator";
 
 export default class BasketController {
     static getBasket = async (req, res, next) => {
@@ -35,12 +36,12 @@ export default class BasketController {
             const {userId} = req;
 
             const validate = Joi.object({
-                productId: Joi.number().min(1).required(),
-                quantity: Joi.number().min(1).required(),
+                productId: Validator.numGreatOne(true),
+                quantity: Validator.numGreatOne(true),
             }).validate({productId, quantity});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             const prod = await Products.findOne({
@@ -87,12 +88,12 @@ export default class BasketController {
             const {id, quantity} = req.body;
 
             const validate = Joi.object({
-                id: Joi.number().min(1).required(),
-                quantity: Joi.number().min(1).required(),
+                id: Validator.numGreatOne(true),
+                quantity: Validator.numGreatOne(true),
             }).validate({id, quantity});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             const basketProduct = await Basket.findOne({
@@ -126,11 +127,11 @@ export default class BasketController {
             const {id} = req.body;
 
             const validate = Joi.object({
-                id: Joi.number().min(1).required(),
+                id: Validator.numGreatOne(true),
             }).validate({id});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             const removedItem = await Basket.destroy({

@@ -1,10 +1,11 @@
-import {Admin, Users} from "../models";
+import {Users} from "../models";
 import jwt from "jsonwebtoken";
 import HttpError from "http-errors";
 import Joi from "joi";
 import { v4 as uuidV4 } from "uuid";
 import Email from "../services/Email";
 import _ from "lodash";
+import Validator from "../middlewares/Validator";
 
 const {JWT_SECRET} = process.env;
 const seqU = Users.sequelize;
@@ -12,19 +13,26 @@ const seqU = Users.sequelize;
 class UserController {
     static register = async (req, res, next) => {
         try {
-            const {firstName, lastName, email, phoneNum, password, confirmPassword} = req.body;
+            const {
+                firstName,
+                lastName,
+                email,
+                phoneNum,
+                password,
+                confirmPassword
+            } = req.body;
 
             const validate = Joi.object({
-                firstName: Joi.string().min(2).max(80).required(),
-                lastName: Joi.string().min(2).max(80).required(),
-                email: Joi.string().min(2).max(50).required(),
-                phoneNum: Joi.string().regex(/^\+\d{11,20}$/).required(),
-                password: Joi.string().min(8).max(50).required(),
-                confirmPassword: Joi.string().min(8).max(50).required(),
+                firstName: Validator.shortText(true),
+                lastName: Validator.shortText(true),
+                email: Validator.email(true),
+                phoneNum: Validator.phone(true),
+                password: Validator.password(true),
+                confirmPassword: Validator.password(true),
             }).validate({firstName, lastName, email, phoneNum, password, confirmPassword});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             if (confirmPassword !== password) {
@@ -74,12 +82,12 @@ class UserController {
             const {email, password} = req.body;
 
             const validate = Joi.object({
-                email: Joi.string().min(2).max(50).required(),
-                password: Joi.string().min(8).max(50).required(),
+                email: Validator.email(true),
+                password: Validator.password(true),
             }).validate({email, password});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             const user = await Users.findOne({ where: {email} });
@@ -108,6 +116,15 @@ class UserController {
         try {
             const { email, token } = req.query;
 
+            const validate = Joi.object({
+                email: Validator.email(true),
+                token: Validator.token(true),
+            }).validate({email, token});
+
+            if (validate.error) {
+                throw HttpError(422, validate.error);
+            }
+
             const user = await Users.findOne({
                 where: {email, status: 'pending'}
             });
@@ -132,8 +149,20 @@ class UserController {
             let {page = 1, limit = 10, name = ''} = req.query;
             page = +page;
             limit = +limit;
+            name = name.trim();
             const offset = (page - 1) * limit;
             let where = {};
+            if(!name) name = undefined;
+
+            const validate = Joi.object({
+                page: Validator.numGreatOne(true),
+                limit: Validator.numGreatOne(true),
+                name: Validator.shortText(false),
+            }).validate({page, limit, name});
+
+            if (validate.error) {
+                throw HttpError(422, validate.error);
+            }
 
             if (name) {
                 where.$or = [
@@ -175,11 +204,11 @@ class UserController {
             const {id} = req.params;
 
             const validate = Joi.object({
-                id: Joi.number().min(1).required(),
+                id:  Validator.numGreatOne(true),
             }).validate({id});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             const user = await Users.findOne({ where: {id} });
@@ -214,13 +243,13 @@ class UserController {
             const {userId} = req;
 
             const validate = Joi.object({
-                firstName: Joi.string().min(2).max(80),
-                lastName: Joi.string().min(2).max(80),
-                phoneNum: Joi.string().regex(/^\+\d{11,20}$/).required(),
+                firstName:  Validator.shortText(false),
+                lastName: Validator.shortText(false),
+                phoneNum: Validator.phone(false),
             }).validate({firstName, lastName, phoneNum});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             const updatedAccount = await Users.update({
@@ -255,20 +284,20 @@ class UserController {
         }
     }
 
-    static deleteAccount = async (req, res, next) => {
+    static blockAccount = async (req, res, next) => {
         try {
             const {id} = req.params;
 
             const validate = Joi.object({
-                id: Joi.number().min(1).required(),
+                id: Validator.numGreatOne(true),
             }).validate({id});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             const deletedAccount = await Users.update({
-                status: 'deleted'
+                status: 'blocked'
             }, {where: {id}});
 
             res.json({
@@ -285,11 +314,11 @@ class UserController {
             const {email} = req.body;
 
             const validate = Joi.object({
-                email: Joi.string().min(10).max(50).required(),
+                email: Validator.email(true),
             }).validate({email});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             const forgetAdmin = await Users.findOne({where: {email}});
@@ -324,17 +353,17 @@ class UserController {
 
     static changePassword = async (req, res, next) => {
         try {
-            const {email, password, token, confirmPassword} = req.body;
+            const {email, password, confirmPassword, token} = req.body;
 
             const validate = Joi.object({
-                email: Joi.string().min(10).max(50).required(),
-                password: Joi.string().min(8).max(50).required(),
-                confirmPassword: Joi.string().min(8).max(50).required(),
-                token: Joi.string().min(8).max(50).required(),
+                email: Validator.email(true),
+                password: Validator.password(true),
+                confirmPassword: Validator.password(true),
+                token: Validator.token(true),
             }).validate({email, password, confirmPassword, token});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             if(confirmPassword !== password){

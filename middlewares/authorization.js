@@ -64,7 +64,7 @@ export default async function authorization(req, res, next) {
             }
 
             req.adminId = adminId;
-            req.adminPossibility = admin.possibility;
+            req.adminRole = admin.role;
             next();
             return;
         }

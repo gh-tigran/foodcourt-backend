@@ -1,39 +1,49 @@
 import HttpError from "http-errors";
 
-const notAllowAdminSenior = [
+const notAllowAdmin = [
+    'paymentPublicKey', 'paymentSetupIntent', 'paymentCreateCard', 'paymentAttach', 'paymentCharge', 'paymentCardList', 'paymentCardSingle', 'paymentDeleteCard', 'paymentDeleteCustomer',
     'getBasket', 'addToBasket', 'updateBasketItem', 'removeFromBasket',
     'userCurrent', 'userModifyCurrent', 'userDeleteCurrent',
+    'orderAdd', 'ordersListUser',
 ];
-const notAllowAdminMiddle = [
-    'userCurrent', 'userDeleteCurrent', 'userModifyCurrent', 'userDelete', 'userSingle', 'usersList',
+
+const notAllowAdminManager = [
+    'paymentPublicKey', 'paymentSetupIntent', 'paymentCreateCard', 'paymentAttach', 'paymentCharge', 'paymentCardList', 'paymentCardSingle', 'paymentDeleteCard', 'paymentDeleteCustomer',
+    'userCurrent', 'userDeleteCurrent', 'userModifyCurrent', 'userBlock', 'userSingle', 'usersList',
     'adminRegister', 'adminsList', 'adminSingle', 'adminDelete', 'adminModify',
     'getBasket', 'addToBasket', 'updateBasketItem', 'removeFromBasket',
+    'orderAdd', 'ordersListUser',
 ];
-const allowAdminJunior = [
-    'adminGetCurrent', 'adminModifyCurrent', 'adminDeleteCurrent'
+
+const allowManager = [
+    'adminGetCurrent', 'adminModifyCurrent', 'adminDeleteCurrent',
+    'ordersList', 'ordersStatistics', 'orderModify', 'singleOrder',
 ];
+
 const allowUser = [
-    'userCurrent', 'userModifyCurrent', 'userDeleteCurrent',
+    'paymentPublicKey', 'paymentSetupIntent', 'paymentCreateCard', 'paymentAttach', 'paymentCharge', 'paymentCardList', 'paymentCardSingle', 'paymentDeleteCard', 'paymentDeleteCustomer',
     'getBasket', 'addToBasket', 'updateBasketItem', 'removeFromBasket',
+    'userCurrent', 'userModifyCurrent', 'userDeleteCurrent',
+    'orderAdd', 'ordersListUser',
 ];
 
 const allowCurrent = (permission) => async (req, res, next)=> {
     try{
-        const {userId, adminId, adminPossibility} = req;
+        const {userId, adminId, adminRole} = req;
 
         if(adminId
-            && adminPossibility === 'senior'
-            && !notAllowAdminSenior.includes(permission)){
+            && adminRole === 'admin'
+            && !notAllowAdmin.includes(permission)){
             next();
             return;
         }else if(adminId
-            && adminPossibility === 'middle'
-            && !notAllowAdminMiddle.includes(permission)){
+            && adminRole === 'admin manager'
+            && !notAllowAdminManager.includes(permission)){
             next();
             return;
         }else if(adminId
-            && adminPossibility === 'junior'
-            && allowAdminJunior.includes(permission)){
+            && adminRole === 'manager'
+            && allowManager.includes(permission)){
             next();
             return;
         }

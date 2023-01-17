@@ -1,6 +1,7 @@
 import {DataTypes, Model} from "sequelize";
 import sequelize from "../services/sequelize";
 import md5 from "md5";
+import Map from "./Map";
 
 const {PASSWORD_SECRET} = process.env;
 
@@ -8,7 +9,6 @@ class Admin extends Model {
     static passwordHash = (val) => md5(md5(val) + PASSWORD_SECRET);
 
     static activate = async (email) => {
-        console.log(email);
         await Admin.update({
             status: 'active',
             confirmToken: null,
@@ -37,18 +37,27 @@ Admin.init({
         allowNull: false,
     },
     phoneNum: {
-        type: DataTypes.STRING(25),
+        type: DataTypes.STRING(),
         allowNull: false,
+        validate: {
+            validator: function(v) {
+                return /^\d{11,}$/.test(v);
+            },
+        }
+    },
+    branchId: {
+        type: DataTypes.BIGINT.UNSIGNED,
+        allowNull: true,
     },
     status: {
         type: DataTypes.ENUM('active', 'pending', 'deleted'),
         allowNull: false,
         defaultValue: 'pending'
     },
-    possibility: {
-        type: DataTypes.ENUM('junior', 'middle', 'senior'),
+    role: {
+        type: DataTypes.ENUM('admin', 'admin manager', 'manager'),
         allowNull: false,
-        defaultValue: 'junior'
+        defaultValue: 'manager'
     },
     confirmToken: {
         type: DataTypes.STRING(80),
@@ -70,6 +79,20 @@ Admin.init({
     sequelize,
     modelName: 'admin',
     tableName: 'admin'
+});
+
+Map.hasMany(Admin, {
+    foreignKey: 'branchId',
+    as: 'admins',
+    onDelete: 'cascade',
+    onUpdate: 'cascade',
+});
+
+Admin.belongsTo(Map, {
+    foreignKey: 'branchId',
+    as: 'branch',
+    onDelete: 'cascade',
+    onUpdate: 'cascade',
 });
 
 export default Admin;

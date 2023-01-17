@@ -26,6 +26,9 @@
     "nodemon": "^2.0.20",
     "sequelize": "^6.25.7",
     "slug": "^8.2.2",
+    "socket.io": "^4.5.4",
+    "socketio-jwt": "^4.6.2",
+    "stripe": "^11.5.0",
     "uuid": "^9.0.0"
   }
 }

@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.get('/get/', OffersController.getOffers);
 router.get('/get/:slugName', OffersController.getSingleOffer);
-router.delete('/:slugName', allowCurrent('deleteOffer'), OffersController.deleteOffer);
+router.delete('/:id', allowCurrent('deleteOffer'), OffersController.deleteOffer);
 router.put('/:slugName', allowCurrent('updateOffer'), uploader.single("image"), OffersController.updateOffer);
 router.post('/', allowCurrent('createOffer'), uploader.single("image"), OffersController.createOffer);
 

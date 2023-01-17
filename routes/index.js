@@ -8,6 +8,8 @@ import map from "./map";
 import users from "./users";
 import admin from "./admin";
 import basket from "./basket";
+import payment from "./payment";
+import orders from "./orders";
 
 const router = express.Router();
 
@@ -20,5 +22,7 @@ router.use('/categories', categories);
 router.use('/products', products);
 router.use('/news', news);
 router.use('/map', map);
+router.use('/payment', payment);
+router.use('/orders', orders);
 
 export default router;

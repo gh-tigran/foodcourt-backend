@@ -8,7 +8,7 @@ const router = express.Router();
 router.get('/get/', ProductsController.getProducts);
 router.get('/get/category/:categorySlug', ProductsController.getProductsByCategory);
 router.get('/get/:slugName', ProductsController.getSingleProduct);
-router.delete('/:slugName', allowCurrent('deleteProduct'), ProductsController.deleteProduct);
+router.delete('/:id', allowCurrent('deleteProduct'), ProductsController.deleteProduct);
 router.put('/:slugName', allowCurrent('updateProduct'), uploader.single("image"), ProductsController.updateProduct);
 router.post('/', allowCurrent('createProduct'), uploader.single("image"), ProductsController.createProduct);
 

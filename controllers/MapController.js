@@ -5,6 +5,7 @@ import {v4 as uuidV4} from "uuid";
 import HttpError from "http-errors";
 import _ from "lodash";
 import Joi from "joi";
+import Validator from "../middlewares/Validator";
 
 export default class MapController {
     static getBranches = async (req, res, next) => {
@@ -31,11 +32,11 @@ export default class MapController {
             const {slugName} = req.params;
 
             const validate = Joi.object({
-                slugName: Joi.string().min(2).max(80).required(),
+                slugName: Validator.shortText(true),
             }).validate({slugName});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             const singleBranch = await Map.findOne({
@@ -59,17 +60,20 @@ export default class MapController {
     static createBranch = async (req, res, next) => {
         try {
             const {files} = req;
-            const {lat, lon, title, location} = req.body;
+            const {lat, lon, title, location, city, country, phone, main} = req.body;
 
             const validate = Joi.object({
                 lat: Joi.number().required(),
                 lon: Joi.number().required(),
-                title: Joi.string().min(2).max(80).required(),
-                location: Joi.string().min(2).max(80).required(),
-            }).validate({lat, lon, title, location});
+                title: Validator.shortText(true),
+                location: Validator.shortText(true),
+                city: Validator.shortText(true),
+                country: Validator.shortText(true),
+                phone: Validator.phone(true),
+            }).validate({lat, lon, title, location, city, country, phone});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             if (_.isEmpty(files)) {
@@ -93,7 +97,26 @@ export default class MapController {
                 throw HttpError(403, 'Invalid location');
             }
 
-            const createdBranch = await Map.create({lat, lon, title, slugName, location});
+            const mainBranch = await Map.findOne({
+                where: {
+                    main: 'main'
+                }
+            });
+
+            console.log(main === true, _.isEmpty(mainBranch));
+
+            const createdBranch = await Map.create({
+                lat,
+                lon,
+                title,
+                slugName,
+                location,
+                city,
+                country,
+                phone,
+                main: (main === true || main === 'true') && _.isEmpty(mainBranch) ?
+                    'main' : 'not main'
+            });
 
             const filesData = files.map(file => {
                 if (['image/png', 'image/jpeg'].includes(file.mimetype)) {
@@ -132,15 +155,15 @@ export default class MapController {
             const {lat, lon, title, location} = req.body;
 
             const validate = Joi.object({
-                slugName: Joi.string().min(2).max(80).required(),
+                slugName: Validator.shortText(true),
                 lat: Joi.number().min(0),
                 lon: Joi.number().min(0),
-                title: Joi.string().min(2).max(80),
-                location: Joi.string().min(2).max(80),
+                title: Validator.shortText(false),
+                location: Validator.shortText(false),
             }).validate({slugName, lat, lon, title, location});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             let where = {};
@@ -165,7 +188,7 @@ export default class MapController {
             });
 
             if (_.isEmpty(oldBranch)) {
-                throw HttpError(404, "Not found branch from that slugName");
+                throw HttpError(403, "Not found branch from that slugName");
             }
 
             if (isExistBranchFromThatCoords && isExistBranchFromThatCoords.slugName !== slugName) {
@@ -244,18 +267,18 @@ export default class MapController {
 
     static deleteBranch = async (req, res, next) => {
         try {
-            const {slugName} = req.params;
+            const {id} = req.params;
 
             const validate = Joi.object({
-                slugName: Joi.string().min(2).max(80).required(),
-            }).validate({slugName});
+                id: Validator.numGreatOne(true),
+            }).validate({id});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             const deletingBranch = await Map.findOne({
-                where: {slugName},
+                where: {id},
                 include: [{
                     model: MapImages,
                     as: 'images',
@@ -264,10 +287,10 @@ export default class MapController {
             });
 
             if (_.isEmpty(deletingBranch)) {
-                throw HttpError(404, "Not found branch from that slugName");
+                throw HttpError(403, "Not found branch from that slugName");
             }
 
-            const deletedBranch = await Map.destroy({where: {slugName}});
+            const deletedBranch = await Map.destroy({where: {id}});
 
             deletingBranch.images.forEach((image) => {
                 const delImagePath = Map.getImgPath(image.name);

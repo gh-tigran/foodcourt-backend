@@ -1,10 +1,11 @@
-import {Admin} from "../models";
+import {Admin, Map} from "../models";
 import jwt from "jsonwebtoken";
 import HttpError from "http-errors";
 import Joi from "joi";
 import { v4 as uuidV4 } from "uuid";
 import Email from "../services/Email";
 import _ from "lodash";
+import Validator from "../middlewares/Validator";
 
 const {JWT_SECRET} = process.env;
 
@@ -29,18 +30,18 @@ class AdminController {
             const {email, password} = req.body;
 
             const validate = Joi.object({
-                email: Joi.string().min(2).max(50).required(),
-                password: Joi.string().min(8).max(50).required(),
+                email: Validator.email(),
+                password: Validator.password(),
             }).validate({email, password});
 
             if (validate.error) {
-                throw new HttpError(403, validate.error);
+                throw new HttpError(422, validate.error);
             }
 
             const admin = await Admin.findOne({ where: {email} });
 
             if (_.isEmpty(admin)  || admin.getDataValue('password') !== Admin.passwordHash(password)) {
-                throw HttpError(403, 'invalid login or password');
+                throw HttpError(403, 'Invalid login or password');
             }
 
             if (admin.status !== 'active') {
@@ -61,20 +62,29 @@ class AdminController {
 
     static register = async (req, res, next) => {
         try {
-            const {firstName, lastName, email, phoneNum, password, possibility, confirmPassword} = req.body;
+            const {
+                firstName,
+                lastName,
+                email,
+                phoneNum,
+                password,
+                confirmPassword,
+                role,
+                branchId,
+            } = req.body;
 
             const validate = Joi.object({
-                firstName: Joi.string().min(2).max(80).required(),
-                lastName: Joi.string().min(2).max(80).required(),
-                email: Joi.string().min(2).max(50).required(),
-                phoneNum: Joi.string().regex(/^\+\d{11,20}$/).required(),
-                password: Joi.string().min(8).max(50).required(),
-                confirmPassword: Joi.string().min(8).max(50).required(),
-                possibility: Joi.string().valid('junior', 'middle', 'senior').required(),
-            }).validate({firstName, lastName, email, phoneNum, password, confirmPassword, possibility});
+                firstName: Validator.shortText(true),
+                lastName: Validator.shortText(true),
+                email: Validator.email(true),
+                phoneNum: Validator.phone(true),
+                password: Validator.password(true),
+                confirmPassword: Validator.password(true),
+                role: Validator.role(true),
+            }).validate({firstName, lastName, email, phoneNum, password, confirmPassword, role});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             if (confirmPassword !== password) {
@@ -87,7 +97,15 @@ class AdminController {
                 if(existsAdmin.status === "deleted"){
                     await Admin.destroy({where: {id: existsAdmin.id}});
                 }else{
-                    throw HttpError(403, {email: `Admin from this email already registered`});
+                    throw HttpError(422, 'Admin from this email already registered');
+                }
+            }
+
+            if(branchId){
+                const existBranch = await Map.findOne({where: {id: branchId}});
+
+                if(_.isEmpty(existBranch)){
+                    throw HttpError(422, "Can't find branch from this id.");
                 }
             }
 
@@ -97,7 +115,7 @@ class AdminController {
             try {
                 const sendEmail = await Email.sendActivationEmail(email, confirmToken, redirectUrl);
             }catch (e){
-                throw HttpError(403, {message: `Error in sending email message`});
+                throw HttpError(422, {message: `Error in sending email message`});
             }
 
             const createdAdmin = await Admin.create({
@@ -107,7 +125,8 @@ class AdminController {
                 password,
                 phoneNum,
                 confirmToken,
-                possibility,
+                role,
+                branchId,
                 status: 'pending',
             });
 
@@ -123,6 +142,15 @@ class AdminController {
     static confirm = async (req, res, next) => {
         try {
             const { email, token } = req.query;
+
+            const validate = Joi.object({
+                email: Validator.email(true),
+                token: Validator.token(true),
+            }).validate({email, token});
+
+            if (validate.error) {
+                throw HttpError(422, validate.error);
+            }
 
             const admin = await Admin.findOne({
                 where: {email, status: 'pending'}
@@ -146,12 +174,42 @@ class AdminController {
     static modifyAccount = async (req, res, next) => {
         try {
             const {id} = req.params;
-            let {firstName, lastName, phoneNum, possibility} = req.body;
+            let {
+                firstName,
+                lastName,
+                phoneNum,
+                role,
+                branchId
+            } = req.body;
+
+            const validate = Joi.object({
+                id: Validator.numGreatOne(true),
+                firstName: Validator.shortText(false),
+                lastName: Validator.shortText(false),
+                phoneNum: Validator.phone(false),
+                role: Validator.role(false),
+            }).validate({id, firstName, lastName, phoneNum, role});
+
+            if (validate.error) {
+                throw HttpError(422, validate.error);
+            }
 
             const admin = await Admin.findOne({where: {id}});
 
             if(admin.status === 'deleted'){
-                throw HttpError(403, 'Admin deleted!');
+                throw HttpError(403, 'Admin deleted.');
+            }
+
+            if(branchId !== null && branchId !== undefined){
+                const existBranch = await Map.findOne({where: {id: branchId}});
+
+                if(_.isEmpty(existBranch)){
+                    throw HttpError(422, "Can't find branch from this id.");
+                }
+            }
+
+            if(role === 'admin' || role === 'admin manager'){
+                branchId = null;
             }
 
             if(admin.status === 'active'){
@@ -160,23 +218,12 @@ class AdminController {
                 phoneNum = undefined;
             }
 
-            const validate = Joi.object({
-                id: Joi.number().min(1).required(),
-                firstName: Joi.string().min(2).max(80),
-                lastName: Joi.string().min(2).max(80),
-                phoneNum: Joi.string().regex(/^\+\d{11,20}$/).required(),
-                possibility: Joi.string().valid('junior', 'middle', 'senior'),
-            }).validate({id, firstName, lastName, phoneNum, possibility});
-
-            if (validate.error) {
-                throw HttpError(403, validate.error);
-            }
-
             const updatedAdmin = await Admin.update({
                 firstName,
                 lastName,
                 phoneNum,
-                possibility
+                role,
+                branchId,
             }, {where: {id}});
 
             res.json({
@@ -194,11 +241,11 @@ class AdminController {
             const {adminId} = req;
 
             const validate = Joi.object({
-                id: Joi.number().min(1).required(),
+                id: Validator.numGreatOne(true)
             }).validate({id});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             if(id === adminId){
@@ -224,13 +271,13 @@ class AdminController {
             let {firstName, lastName, phoneNum} = req.body;
 
             const validate = Joi.object({
-                firstName: Joi.string().min(2).max(80),
-                lastName: Joi.string().min(2).max(80),
-                phoneNum: Joi.string().regex(/^\+\d{11,20}$/).required(),
+                firstName: Validator.shortText(false),
+                lastName: Validator.shortText(false),
+                phoneNum: Validator.phone(false),
             }).validate({firstName, lastName, phoneNum});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             const updatedAdmin = await Admin.update({
@@ -248,26 +295,15 @@ class AdminController {
         }
     }
 
-    // static deleteCurrentAccount = async (req, res, next) => {
-    //     try {
-    //         const {adminId} = req;
-    //
-    //         const deletedAdmin = await Admin.update({
-    //             status: 'deleted'
-    //         }, {where: {id: adminId}});
-    //
-    //         res.json({
-    //             status: 'ok',
-    //             deletedAdmin
-    //         });
-    //     } catch (e) {
-    //         next(e)
-    //     }
-    // }
-
     static list = async (req, res, next) => {
         try {
-            const admins = await Admin.findAll();
+            const {adminId} = req;
+
+            const admins = await Admin.findAll({
+                where: {
+                    id: {$not: adminId}
+                }
+            });
 
             res.json({
                 status: 'ok',
@@ -283,7 +319,7 @@ class AdminController {
             const {id} = req.params;
 
             const validate = Joi.object({
-                id: Joi.number().min(1).required(),
+                id: Validator.numGreatOne(true),
             }).validate({id});
 
             if (validate.error) {
@@ -306,11 +342,11 @@ class AdminController {
             const {email} = req.body;
 
             const validate = Joi.object({
-                email: Joi.string().min(10).max(50).required(),
+                email: Validator.email(true),
             }).validate({email});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             const forgetAdmin = await Admin.findOne({where: {email}});
@@ -319,7 +355,7 @@ class AdminController {
                 throw HttpError(403, "Email isn't valid");
             }
 
-            if(forgetAdmin.confirmToken && forgetAdmin.status === 'pending'){
+            if(forgetAdmin.status !== 'active'){
                 throw HttpError(403, "Email isn't active. Please activate account by token from email before changing password");
             }
 
@@ -348,14 +384,14 @@ class AdminController {
             const {email, password, confirmPassword, token} = req.body;
 
             const validate = Joi.object({
-                email: Joi.string().min(10).max(50).required(),
-                password: Joi.string().min(8).max(50).required(),
-                confirmPassword: Joi.string().min(8).max(50).required(),
-                token: Joi.string().min(8).max(50).required(),
+                email: Validator.email(true),
+                password: Validator.password(true),
+                confirmPassword: Validator.password(true),
+                token: Validator.token(true),
             }).validate({email, password, confirmPassword, token});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             if (confirmPassword !== password) {
@@ -389,6 +425,23 @@ class AdminController {
             next(e)
         }
     }
+
+    // static deleteCurrentAccount = async (req, res, next) => {
+    //     try {
+    //         const {adminId} = req;
+    //
+    //         const deletedAdmin = await Admin.update({
+    //             status: 'deleted'
+    //         }, {where: {id: adminId}});
+    //
+    //         res.json({
+    //             status: 'ok',
+    //             deletedAdmin
+    //         });
+    //     } catch (e) {
+    //         next(e)
+    //     }
+    // }
 }
 
 export default AdminController

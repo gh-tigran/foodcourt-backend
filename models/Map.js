@@ -26,7 +26,7 @@ Map.init({
         autoIncrement: true,
         allowNull: false
     },
-    lat:{//todo change lat, lon fields type(geometry/point)
+    lat:{
         type: DataTypes.DOUBLE,
         allowNull: false,
     },
@@ -41,6 +41,28 @@ Map.init({
     location: {
         type: DataTypes.STRING(100),
         allowNull: false,
+    },
+    city: {
+        type: DataTypes.STRING(80),
+        allowNull: false,
+    },
+    country: {
+        type: DataTypes.STRING(80),
+        allowNull: false,
+    },
+    phone: {
+        type: DataTypes.STRING(),
+        allowNull: false,
+        validate: {
+            validator: function(v) {
+                return /^\d{11,}$/.test(v);
+            },
+        }
+    },
+    main: {
+        type: DataTypes.ENUM('main', 'not main'),
+        allowNull: false,
+        defaultValue: 'not main'
     },
     slugName: {
         type: DataTypes.STRING(80),

@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.get('/get/', CategoriesController.getCategories);
 router.get('/get/:slugName', CategoriesController.getSingleCategory);
-router.delete('/:slugName', allowCurrent('deleteCategory'), CategoriesController.deleteCategory);
+router.delete('/:id', allowCurrent('deleteCategory'), CategoriesController.deleteCategory);
 router.put('/:slugName', allowCurrent('updateCategory'), uploader.single("image"), CategoriesController.updateCategory);
 router.post('/', allowCurrent('createCategory'), uploader.single("image"), CategoriesController.createCategory);
 

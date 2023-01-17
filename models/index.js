@@ -9,3 +9,7 @@ export {default as News} from "./News";
 export {default as Map} from "./Map";
 export {default as MapImages} from "./MapImages";
 export {default as ProdCatRel} from "./ProdCatRel";
+// export {default as Customers} from "./Customers";
+export {default as Orders} from "./Orders";
+export {default as TempOrders} from "./TempOrders";
+export {default as OrderRel} from "./OrderRel";

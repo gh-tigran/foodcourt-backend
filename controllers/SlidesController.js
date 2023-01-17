@@ -5,6 +5,7 @@ import {v4 as uuidV4} from "uuid";
 import HttpError from "http-errors";
 import _ from "lodash";
 import Joi from "joi";
+import Validator from "../middlewares/Validator";
 
 export default class SlidesController {
     static getSlides = async (req, res, next) => {
@@ -25,11 +26,11 @@ export default class SlidesController {
             const {id} = req.params;
 
             const validate = Joi.object({
-                id: Joi.number().min(1).required(),
+                id: Validator.numGreatOne(true),
             }).validate({id});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             const slide = await Slides.findOne({
@@ -50,7 +51,7 @@ export default class SlidesController {
             const {file} = req;
 
             if(_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)){
-                throw HttpError(403, "Doesn't sent image!");
+                throw HttpError(422, "Doesn't sent image!");
             }
 
             const imagePath = path.join('files', uuidV4() + '-' + file.originalname);
@@ -79,18 +80,18 @@ export default class SlidesController {
             const {id} = req.params;
 
             const validate = Joi.object({
-                id: Joi.number().min(1).required(),
+                id: Validator.numGreatOne(true),
             }).validate({id});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             const updatingSlide = await Slides.findOne({where: {id}});
             let filePath = '';
 
             if(_.isEmpty(updatingSlide)){
-                throw HttpError(404, "Not found slide from that id!");
+                throw HttpError(403, "Not found slide from that id!");
             }
 
             if(!_.isEmpty(file) && ['image/png', 'image/jpeg'].includes(file.mimetype)){
@@ -123,17 +124,17 @@ export default class SlidesController {
             const {id} = req.params;
 
             const validate = Joi.object({
-                id: Joi.number().min(1).required(),
+                id: Validator.numGreatOne(true),
             }).validate({id});
 
             if (validate.error) {
-                throw HttpError(403, validate.error);
+                throw HttpError(422, validate.error);
             }
 
             const deletingSlide = await Slides.findOne({where: {id}});
 
             if(_.isEmpty(deletingSlide)){
-                throw HttpError(404, "Not found slide from that id!");
+                throw HttpError(403, "Not found slide from that id!");
             }
 
             const delImgPath = Slides.getImgPath(deletingSlide.imagePath);
@@ -150,53 +151,4 @@ export default class SlidesController {
             next(e);
         }
     };
-
-    // static updateSlide = async (req, res, next) => {
-    //     try {
-    //         const {file} = req;
-    //         const {id} = req.params;
-    //         const {src} = req.body;
-    //
-    //         const validate = Joi.object({
-    //             id: Joi.number().min(1).required(),
-    //             src: Joi.string().min(1).max(150).required(),
-    //         }).validate({id, src});
-    //
-    //         if (validate.error) {
-    //             throw HttpError(403, validate.error);
-    //         }
-    //
-    //         if(_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)){
-    //             throw HttpError(403, "Doesn't sent image!");
-    //         }
-    //
-    //         const updatingSlide = await Slides.findOne({where: {id}});
-    //
-    //         if(_.isEmpty(updatingSlide)){
-    //             throw HttpError(404, "Not found slide from that id!");
-    //         }
-    //
-    //         const filePath = path.join('files', uuidV4() + '-' + file.originalname);
-    //         const slideImgPath = Slides.getImgPath(updatingSlide.imagePath);
-    //
-    //         fs.renameSync(file.path, Slides.getImgPath(filePath));
-    //
-    //         if (fs.existsSync(slideImgPath)) fs.unlinkSync(slideImgPath)
-    //
-    //         const updatedSlide = await Slides.update({
-    //             imagePath: filePath,
-    //             src
-    //         }, {where: {id},});
-    //
-    //         res.json({
-    //             status: "ok",
-    //             updatedSlide
-    //         })
-    //     } catch (e) {
-    //         if (!_.isEmpty(req.file) && fs.existsSync(req.file.path)) {
-    //             fs.unlinkSync(req.file.path);
-    //         }
-    //         next(e);
-    //     }
-    // }
 }

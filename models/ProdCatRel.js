@@ -47,13 +47,4 @@ Products.belongsToMany(Categories, {
     onUpdate: 'NO ACTION',
 });
 
-// Categories.addConstraint('Products', {
-//     references: {
-//         table: 'Products',
-//         field: 'categoryId'
-//     },
-//     type: 'foreign key',
-//     name: 'custom_unique_constraint_name'
-// });
-
 export default ProdCatRel;
