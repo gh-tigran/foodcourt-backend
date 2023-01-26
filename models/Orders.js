@@ -18,7 +18,7 @@ Orders.init({
         allowNull: false
     },
     quantity: {
-        type: DataTypes.INTEGER().UNSIGNED,
+        type: DataTypes.INTEGER(100).UNSIGNED,
         allowNull: false,
         defaultValue: 1
     },

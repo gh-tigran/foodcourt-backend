@@ -10,8 +10,7 @@ import Validator from "../middlewares/Validator";
 export default class NewsController {
     static getNews = async (req, res, next) => {
         try {
-            let {page = 1, limit = 10, title = ''} = req.query;
-            if(!title) title = undefined;
+            let {page = 1, limit = 10, title} = req.query;
 
             const validate = Joi.object({
                 page: Validator.numGreatOne(true),
@@ -25,8 +24,11 @@ export default class NewsController {
 
             page = +page;
             limit = +limit;
+            if(title) title = title.trim();
             const offset = (page - 1) * limit;
-            const where = title ? {title: { $like: `%${title}%` }} : {};
+            const where = title ? {
+                title: { $like: `%${title}%` }
+            } : {};
             const count = await News.count({where});
             const totalPages = Math.ceil(count / limit);
 
@@ -89,17 +91,17 @@ export default class NewsController {
                 throw HttpError(403, "Doesn't sent image!");
             }
 
-            const filePath = path.join('files', uuidV4() + '-' + file.originalname);
+            const imagePath = path.join('files', uuidV4() + '-' + file.originalname);
             const slugName = await News.generateSlug(title);
 
             if(slugName === '-'){
                 throw HttpError(403, 'Invalid title');
             }
 
-            fs.renameSync(file.path, News.getImgPath(filePath));
+            fs.renameSync(file.path, News.getImgPath(imagePath));
 
             const createdNews = await News.create({
-                imagePath: filePath,
+                imagePath,
                 slugName,
                 title,
                 description,
@@ -120,50 +122,50 @@ export default class NewsController {
     static updateNews = async (req, res, next) => {
         try {
             const {file} = req;
-            const {slugName} = req.params;
+            const {id} = req.params;
             const {title, description} = req.body;
 
             const validate = Joi.object({
-                slugName: Validator.shortText(true),
+                id: Validator.numGreatOne(true),
                 title: Validator.shortText(true),
                 description: Validator.longText(true),
-            }).validate({slugName, title, description});
+            }).validate({id, title, description});
 
             if (validate.error) {
                 throw HttpError(422, validate.error);
             }
 
-            const updatingNews = await News.findOne({where: {slugName}});
-            let slugNameUpdate = '';
-            let filePath = '';
+            const news = await News.findOne({where: {id}});
+            let slugName = news.slugName;
+            let imagePath = '';
 
-            if (_.isEmpty(updatingNews)) {
-                throw HttpError(403, "Not found product from that slugName");
+            if (_.isEmpty(news)) {
+                throw HttpError(403, "Not found news from that id");
             }
 
-            if(title && title !== updatingNews.title){
-                slugNameUpdate = await News.generateSlug(title);
+            if(title && title !== news.title){
+                slugName = await News.generateSlug(title);
 
-                if(slugNameUpdate === '-'){
+                if(slugName === '-'){
                     throw HttpError(403, 'Invalid title');
                 }
             }
 
             if(!_.isEmpty(file) && ['image/png', 'image/jpeg'].includes(file.mimetype)){
-                filePath = path.join('files', uuidV4() + '-' + file.originalname);
-                const updateImgPath = News.getImgPath(updatingNews.imagePath);
+                imagePath = path.join('files', uuidV4() + '-' + file.originalname);
+                const updateImagePath = News.getImgPath(news.imagePath);
 
-                fs.renameSync(file.path, News.getImgPath(filePath));
+                fs.renameSync(file.path, News.getImgPath(imagePath));
 
-                if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath);
+                if (fs.existsSync(updateImagePath)) fs.unlinkSync(updateImagePath);
             }
 
             const updatedNews = await News.update({
-                imagePath: filePath || updatingNews.imagePath,
-                slugName: slugNameUpdate || slugName,
+                imagePath: imagePath || news.imagePath,
+                slugName,
                 title,
                 description,
-            }, {where: {slugName}});
+            }, {where: {id}});
 
             res.json({
                 status: "ok",
@@ -189,16 +191,16 @@ export default class NewsController {
                 throw HttpError(422, validate.error);
             }
 
-            const deletingNews = await News.findOne({where: {id}});
+            const news = await News.findOne({where: {id}});
 
-            if (_.isEmpty(deletingNews)) {
-                throw HttpError(403, "Not found product from that slugName");
+            if (_.isEmpty(news)) {
+                throw HttpError(403, "Not found news from that id");
             }
 
-            const delImgPath = News.getImgPath(deletingNews.imagePath);
+            const delImagePath = News.getImgPath(news.imagePath);
             const deletedNews = await News.destroy({where: {id}});
 
-            if (fs.existsSync(delImgPath)) fs.unlinkSync(delImgPath)
+            if (fs.existsSync(delImagePath)) fs.unlinkSync(delImagePath)
 
             res.json({
                 status: "ok",
@@ -208,57 +210,4 @@ export default class NewsController {
             next(e);
         }
     };
-
-    // static updateNews = async (req, res, next) => {
-    //     try {
-    //         const {file} = req;
-    //         const {slugName} = req.params;
-    //         const {title, description} = req.body;
-    //
-    //         const validate = Joi.object({
-    //             slugName: Joi.string().min(2).max(80).required(),
-    //             title: Joi.string().min(2).max(80).required(),
-    //             description: Joi.string().min(2).max(3000).required(),
-    //         }).validate({slugName, title, description});
-    //
-    //         if (validate.error) {
-    //             throw HttpError(403, validate.error);
-    //         }
-    //
-    //         if(_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)){
-    //             throw HttpError(403, "Doesn't sent image!");
-    //         }
-    //
-    //         const updatingNews = await News.findOne({where: {slugName}});
-    //
-    //         if (_.isEmpty(updatingNews)) {
-    //             throw HttpError(404, "Not found product from that slugName");
-    //         }
-    //
-    //         const filePath = path.join('files', uuidV4() + '-' + file.originalname);
-    //         const updateImgPath = News.getImgPath(updatingNews.imagePath);
-    //
-    //         fs.renameSync(file.path, News.getImgPath(filePath));
-    //
-    //         if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath);
-    //
-    //         const slugNameUpdate = await News.generateSlug(title);
-    //         const updatedNews = await News.update({
-    //             imagePath: filePath,
-    //             slugName: slugNameUpdate,
-    //             title,
-    //             description,
-    //         }, {where: {slugName}});
-    //
-    //         res.json({
-    //             status: "ok",
-    //             updatedNews
-    //         })
-    //     } catch (e) {
-    //         if (!_.isEmpty(req.file) && fs.existsSync(req.file.path)) {
-    //             fs.unlinkSync(req.file.path);
-    //         }
-    //         next(e);
-    //     }
-    // }
 }

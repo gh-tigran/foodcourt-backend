@@ -29,8 +29,7 @@ export default async function authorization(req, res, next) {
     try {
         const {path, method} = req;
         const token = req.headers.authorization || req.query.token || '';
-        let userId;
-        let adminId;
+        let userId, adminId;
 
         if (method === 'OPTIONS' || EXCLUDE.some((d) => path.replace(/\?.*/, '').startsWith(d))) {
             next();

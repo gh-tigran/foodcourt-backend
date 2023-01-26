@@ -29,18 +29,18 @@ export default class MapController {
 
     static getSingleBranch = async (req, res, next) => {
         try {
-            const {slugName} = req.params;
+            const {id} = req.params;
 
             const validate = Joi.object({
-                slugName: Validator.shortText(true),
-            }).validate({slugName});
+                id: Validator.numGreatOne(true),
+            }).validate({id});
 
             if (validate.error) {
                 throw HttpError(422, validate.error);
             }
 
             const singleBranch = await Map.findOne({
-                where: {slugName},
+                where: {id},
                 include: [{
                     model: MapImages,
                     as: 'images',
@@ -60,7 +60,16 @@ export default class MapController {
     static createBranch = async (req, res, next) => {
         try {
             const {files} = req;
-            const {lat, lon, title, location, city, country, phone, main} = req.body;
+            const {
+                lat,
+                lon,
+                title,
+                location,
+                city,
+                country,
+                phoneNum,
+                main
+            } = req.body;
 
             const validate = Joi.object({
                 lat: Joi.number().required(),
@@ -69,72 +78,61 @@ export default class MapController {
                 location: Validator.shortText(true),
                 city: Validator.shortText(true),
                 country: Validator.shortText(true),
-                phone: Validator.phone(true),
-            }).validate({lat, lon, title, location, city, country, phone});
+                phoneNum: Validator.phone(true),
+            }).validate({lat, lon, title, location, city, country, phoneNum});
 
             if (validate.error) {
                 throw HttpError(422, validate.error);
             }
 
             if (_.isEmpty(files)) {
-                throw HttpError(403, "Doesn't sent image!");
+                throw HttpError(403, "Doesn't sent image.");
             }
 
-            const hasImage = files.find(file => ['image/png', 'image/jpeg'].includes(file.mimetype));
-            const isExistBranchFromThatCoords = await Map.findOne({where: {lat, lon}});
+            const imageFile = files.find(file => ['image/png', 'image/jpeg'].includes(file.mimetype));
 
-            if (!_.isEmpty(isExistBranchFromThatCoords)) {
-                throw HttpError(403, "Branch from that coords already exist!!!");
+            if (_.isEmpty(imageFile)) {
+                throw HttpError(403, "Doesn't sent image.");
             }
 
-            if (_.isEmpty(hasImage)) {
-                throw HttpError(403, "Doesn't sent image!");
-            }
+            const branchFromSameCoords = await Map.findOne({where: {lat, lon}});
 
-            const slugName = await Map.generateSlug(location);
-
-            if(slugName === '-'){
-                throw HttpError(403, 'Invalid location');
+            if (!_.isEmpty(branchFromSameCoords)) {
+                throw HttpError(403, "Branch from that coords already exist.");
             }
 
             const mainBranch = await Map.findOne({
-                where: {
-                    main: 'main'
-                }
+                where: { main: 'main' }
             });
-
-            console.log(main === true, _.isEmpty(mainBranch));
 
             const createdBranch = await Map.create({
                 lat,
                 lon,
                 title,
-                slugName,
                 location,
                 city,
                 country,
-                phone,
+                phoneNum,
                 main: (main === true || main === 'true') && _.isEmpty(mainBranch) ?
                     'main' : 'not main'
             });
 
-            const filesData = files.map(file => {
+            const imagesData = files.map(file => {
                 if (['image/png', 'image/jpeg'].includes(file.mimetype)) {
                     const fileName = uuidV4() + '-' + file.originalname;
-                    const filePath = path.join('files', fileName);
+                    const imagePath = path.join('files', fileName);
 
-                    fs.renameSync(file.path, path.join(__dirname, '../public/', filePath));
+                    fs.renameSync(file.path, path.join(__dirname, '../public/', imagePath));
 
                     return {
-                        name: filePath,
+                        name: imagePath,
                         size: file.size,
                         branchId: createdBranch.id,
-                        branchSlug: createdBranch.slugName,
                     }
                 }
             });
 
-            await MapImages.bulkCreate(filesData);
+            await MapImages.bulkCreate(imagesData);
 
             res.json({
                 status: "ok",
@@ -151,35 +149,32 @@ export default class MapController {
     static updateBranch = async (req, res, next) => {
         try {
             const {files} = req;
-            const {slugName} = req.params;
+            const {id} = req.params;
             const {lat, lon, title, location} = req.body;
 
             const validate = Joi.object({
-                slugName: Validator.shortText(true),
+                id: Validator.numGreatOne(true),
                 lat: Joi.number().min(0),
                 lon: Joi.number().min(0),
                 title: Validator.shortText(false),
                 location: Validator.shortText(false),
-            }).validate({slugName, lat, lon, title, location});
+            }).validate({id, lat, lon, title, location});
 
             if (validate.error) {
                 throw HttpError(422, validate.error);
             }
 
             let where = {};
-            let slugNameUpdate = '';
-            let isExistBranchFromThatCoords = {};
+            let branchFromSameCoords = {};
 
-            if (lat) where = {lat};
-
-            if (lon) where = {...where, lon};
+            if (lat && lon) where = {lat, lon};
 
             if (!_.isEmpty(where)) {
-                isExistBranchFromThatCoords = await Map.findOne({where});
+                branchFromSameCoords = await Map.findOne({where});
             }
 
-            const oldBranch = await Map.findOne({
-                where: {slugName},
+            const branch = await Map.findOne({
+                where: {id},
                 include: [{
                     model: MapImages,
                     as: 'images',
@@ -187,70 +182,51 @@ export default class MapController {
                 }],
             });
 
-            if (_.isEmpty(oldBranch)) {
-                throw HttpError(403, "Not found branch from that slugName");
+            if (_.isEmpty(branch)) {
+                throw HttpError(403, "Not found branch from that id");
             }
 
-            if (isExistBranchFromThatCoords && isExistBranchFromThatCoords.slugName !== slugName) {
+            if (branchFromSameCoords && branchFromSameCoords.id !== id) {
                 throw HttpError(403, "Branch from that coords already exist!!!");
             }
 
-            if (location && location !== oldBranch.location) {
-                slugNameUpdate = await Map.generateSlug(location);
-
-                if(slugNameUpdate === '-'){
-                    throw HttpError(403, 'Invalid location');
-                }
-            }
-
             if (!_.isEmpty(files)) {
-                const hasImage = files.find(file => ['image/png', 'image/jpeg'].includes(file.mimetype));
+                const imageFile = files.find(file => ['image/png', 'image/jpeg'].includes(file.mimetype));
 
-                if (!_.isEmpty(hasImage)) {
-                    const filesData = files.map(file => {
+                if (!_.isEmpty(imageFile)) {
+                    const imagesData = files.map(file => {
                         if (['image/png', 'image/jpeg'].includes(file.mimetype)) {
                             const fileName = uuidV4() + '-' + file.originalname;
-                            const filePath = path.join('files', fileName);
+                            const imagePath = path.join('files', fileName);
 
-                            fs.renameSync(file.path, Map.getImgPath(filePath));
+                            fs.renameSync(file.path, Map.getImgPath(imagePath));
 
                             return {
-                                name: filePath,
+                                name: imagePath,
                                 size: file.size,
-                                branchId: oldBranch.id,
-                                branchSlug: slugNameUpdate || slugName,
+                                branchId: branch.id,
                             }
                         }
                     });
 
-                    await MapImages.destroy({where: {branchSlug: slugName}});
-                    await MapImages.bulkCreate(filesData);
+                    await MapImages.destroy({where: {branchId: id}});
+                    await MapImages.bulkCreate(imagesData);
 
-                    oldBranch.images.forEach((image) => {
+                    branch.images.forEach((image) => {
                         const delImagePath = Map.getImgPath(image.name);
                         if (fs.existsSync(delImagePath)) fs.unlinkSync(delImagePath);
                     });
                 }
-            } else if (location) {
-                oldBranch.images.forEach((image) => {
-                    (async () => {
-                        await MapImages.update(
-                            {branchSlug: slugNameUpdate},
-                            {where: {branchSlug: image.branchSlug}}
-                        )
-                    })()
-                });
             }
 
             const updatedBranch = await Map.update(
                 {
-                    slugName: slugNameUpdate || slugName,
                     lat,
                     lon,
                     title,
                     location,
                 },
-                {where: {slugName}}
+                {where: {id}}
             );
 
             res.json({
@@ -277,7 +253,7 @@ export default class MapController {
                 throw HttpError(422, validate.error);
             }
 
-            const deletingBranch = await Map.findOne({
+            const branch = await Map.findOne({
                 where: {id},
                 include: [{
                     model: MapImages,
@@ -286,13 +262,13 @@ export default class MapController {
                 }],
             });
 
-            if (_.isEmpty(deletingBranch)) {
-                throw HttpError(403, "Not found branch from that slugName");
+            if (_.isEmpty(branch)) {
+                throw HttpError(403, "Not found branch from that id");
             }
 
             const deletedBranch = await Map.destroy({where: {id}});
 
-            deletingBranch.images.forEach((image) => {
+            branch.images.forEach((image) => {
                 const delImagePath = Map.getImgPath(image.name);
                 if (fs.existsSync(delImagePath)) fs.unlinkSync(delImagePath);
             });
@@ -305,89 +281,4 @@ export default class MapController {
             next(e);
         }
     };
-
-    // static updateBranch = async (req, res, next) => {
-    //     try {
-    //         const {files} = req;
-    //         const {slugName} = req.params;
-    //         const {lat, lon, title, location} = req.body;
-    //
-    //         const validate = Joi.object({
-    //             slugName: Joi.string().min(2).max(80).required(),
-    //             lat: Joi.number().min(0).required(),
-    //             lon: Joi.number().min(0).required(),
-    //             title: Joi.string().min(2).max(80).required(),
-    //             location: Joi.string().min(2).max(80).required(),
-    //         }).validate({slugName, lat, lon, title, location});
-    //
-    //         if (validate.error) {
-    //             throw HttpError(403, validate.error);
-    //         }
-    //
-    //         const oldBranch = await Map.findOne({
-    //             where: {slugName},
-    //             include: [{
-    //                 model: MapImages,
-    //                 as: 'images',
-    //                 required: true,
-    //             }],
-    //         });
-    //
-    //         if (_.isEmpty(oldBranch)) {
-    //             throw HttpError(404, "Not found branch from that slugName");
-    //         }
-    //
-    //         if(_.isEmpty(files)){
-    //             throw HttpError(403, "Doesn't sent image!");
-    //
-    //         }
-    //
-    //         const hasImage = files.find(file => ['image/png', 'image/jpeg'].includes(file.mimetype));
-    //
-    //         if(_.isEmpty(hasImage)){
-    //             throw HttpError(403, "Doesn't sent image!");
-    //
-    //         }
-    //
-    //         const slugNameUpdate = await Map.generateSlug(title);
-    //         const updatedBranch = await Map.update(
-    //             {lat, lon, title, location, slugName: slugNameUpdate, /*fullCoords: `${x}${y}`*/},
-    //             {where: {slugName}}
-    //         );
-    //
-    //         const filesData = files.map(file => {
-    //             if (['image/png', 'image/jpeg'].includes(file.mimetype)) {
-    //                 const fileName = uuidV4() + '-' + file.originalname;
-    //                 const filePath = path.join('files', fileName);
-    //
-    //                 fs.renameSync(file.path, path.join(__dirname, '../public/', filePath));
-    //
-    //                 return {
-    //                     name: filePath,
-    //                     size: file.size,
-    //                     branchId: oldBranch.id,
-    //                     branchSlug: slugNameUpdate,
-    //                 }
-    //             }
-    //         });
-    //
-    //         await MapImages.destroy({where: {branchSlug: slugName}});
-    //         await MapImages.bulkCreate(filesData);
-    //
-    //         oldBranch.images.forEach((image) => {
-    //             const delImagePath = Map.getImgPath(image.name);
-    //             if(fs.existsSync(delImagePath)) fs.unlinkSync(delImagePath);
-    //         });
-    //
-    //         res.json({
-    //             status: "ok",
-    //             updatedBranch
-    //         })
-    //     } catch (e) {
-    //         if (!_.isEmpty(req.file) && fs.existsSync(req.file.path)) {
-    //             fs.unlinkSync(req.file.path);
-    //         }
-    //         next(e);
-    //     }
-    // }
 }

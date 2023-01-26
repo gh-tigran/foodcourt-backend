@@ -14,10 +14,9 @@ export default class ProductsController {
                 order = 0,
                 page = 1,
                 limit = 10,
-                title = '',
+                title,
                 category
             } = req.query;
-            title = title || undefined;
 
             const validate = Joi.object({
                 order: Joi.number().valid(0, 1, 2, 3),
@@ -34,20 +33,22 @@ export default class ProductsController {
             limit = +limit;
             const offset = (page - 1) * limit;
             const orderTypes = Products.getOrderTypes();
-            const where = title ? {title: {$like: `%${title}%`}} : {};
+            const where = title ? {title: {$like: `%${title.trim()}%`}} : {};
 
             const count = await Products.findAll({
                 where,
+                attributes: ['id'],
                 include: [{
                     model: Categories,
                     as: 'categories',
+                    attributes: [],
                     where: category ? {
                         id: category
                     } : null
                 }],
             });
-            const totalPages = Math.ceil(count.length / limit);
 
+            const totalPages = Math.ceil(count.length / limit);
             const products = await Products.findAll({
                 where: {
                     ...where,
@@ -93,10 +94,9 @@ export default class ProductsController {
                 order = 0,
                 page = 1,
                 limit = 10,
-                title = ''
+                title
             } = req.query;
             const {categorySlug} = req.params;
-            title = title || undefined;
 
             const validate = Joi.object({
                 order: Joi.number().valid(0, 1, 2, 3),
@@ -113,22 +113,29 @@ export default class ProductsController {
             page = +page;
             limit = +limit;
             const offset = (page - 1) * limit;
-            const where = title ? {title: {$like: `%${title}%`}} : {};
-            const include = [{
-                model: Categories,
-                as: 'categories',
-                required: true,
-                where: {
-                    slugName: categorySlug
-                }
-            }];
-            const count = await Products.findAll({where, include, attributes: []});
+            const where = title ? {title: {$like: `%${title.trim()}%`}} : {};
+            const count = await Products.findAll({
+                where,
+                include: [{
+                    model: Categories,
+                    as: 'categories',
+                    required: true,
+                    where: {
+                        slugName: categorySlug
+                    }
+                }],
+                attributes: []
+            });
+
             const totalPages = Math.ceil(count.length / limit);
             const orderTypes = Products.getOrderTypes();
-
             const products = await Products.findAll({
                 where,
-                include,
+                include: [{
+                    model: Categories,
+                    as: 'categories',
+                    required: true,
+                }],
                 order: [
                     [
                         orderTypes[order].orderBy,
@@ -172,7 +179,6 @@ export default class ProductsController {
                 include: [{
                     model: Categories,
                     as: 'categories',
-                    required: true,
                 }]
             });
 
@@ -205,9 +211,9 @@ export default class ProductsController {
                 throw HttpError(422, "Doesn't sent image!");
             }
 
-            const filePath = path.join('files', uuidV4() + '-' + file.originalname);
+            const imagePath = path.join('files', uuidV4() + '-' + file.originalname);
 
-            fs.renameSync(file.path, Products.getImgPath(filePath));
+            fs.renameSync(file.path, Products.getImgPath(imagePath));
 
             const slugName = await Products.generateSlug(title);
 
@@ -216,7 +222,7 @@ export default class ProductsController {
             }
 
             const createdProduct = await Products.create({
-                imagePath: filePath,
+                imagePath,
                 title,
                 description,
                 price,
@@ -226,12 +232,12 @@ export default class ProductsController {
 
             categoryId.forEach(id => {
                 (async () => {
-                    const cat = await Categories.findOne({where: {id}});
+                    const category = await Categories.findOne({where: {id}});
 
-                    if (!_.isEmpty(cat)) {
+                    if (!_.isEmpty(category)) {
                         await ProdCatRel.create({
                             productId: createdProduct.id,
-                            categoryId: cat.id,
+                            categoryId: category.id,
                         });
                     }
                 })()
@@ -252,67 +258,67 @@ export default class ProductsController {
     static updateProduct = async (req, res, next) => {
         try {
             const {file} = req;
-            const {slugName} = req.params;
+            const {id} = req.params;
             const {title, description, price, categoryId} = req.body;
 
             const validate = Joi.object({
-                slugName: Validator.shortText(true),
+                id: Validator.numGreatOne(true),
                 title: Validator.shortText(false),
                 description: Validator.longText(false),
                 price: Validator.numGreatOne(false),
                 categoryId: Validator.idArray(false),
-            }).validate({slugName, title, description, price, categoryId});
+            }).validate({id, title, description, price, categoryId});
 
             if (validate.error) {
                 throw HttpError(422, validate.error);
             }
 
-            const updatingProduct = await Products.findOne({where: {slugName}});
-            let slugNameUpdate = '';
-            let filePath = '';
+            const product = await Products.findOne({where: {id}});
+            let slugName = product.slugName;
+            let imagePath = '';
 
-            if (_.isEmpty(updatingProduct)) {
-                throw HttpError(403, "Not found product from that slagName");
+            if (_.isEmpty(product)) {
+                throw HttpError(403, "Not found product from that id");
             }
 
             if (!_.isEmpty(categoryId)) {
-                await ProdCatRel.destroy({where: {productId: updatingProduct.id}});
+                await ProdCatRel.destroy({where: {productId: id}});
 
-                categoryId.forEach(id => {
+                categoryId.forEach(tempId => {
                     (async () => {
                         await ProdCatRel.create({
-                            productId: updatingProduct.id,
-                            categoryId: id
+                            productId: id,
+                            categoryId: tempId
                         })
                     })()
                 })
             }
 
-            if (title && title !== updatingProduct.title) {
-                slugNameUpdate = await Products.generateSlug(title);
+            if (title && title !== product.title) {
+                slugName = await Products.generateSlug(title);
 
-                if(slugNameUpdate === '-'){
+                if(slugName === '-'){
                     throw HttpError(403, 'Invalid title');
                 }
             }
 
             if (!_.isEmpty(file) && ['image/png', 'image/jpeg'].includes(file.mimetype)) {
-                filePath = path.join('files', uuidV4() + '-' + file.originalname);
+                imagePath = path.join('files', uuidV4() + '-' + file.originalname);
 
-                fs.renameSync(file.path, Products.getImgPath(filePath));
+                fs.renameSync(file.path, Products.getImgPath(imagePath));
 
-                const updateImgPath = Products.getImgPath(updatingProduct.imagePath);
+                const updateImagePath = Products.getImgPath(product.imagePath);
 
-                if (fs.existsSync(updateImgPath)) fs.unlinkSync(updateImgPath)
+                if (fs.existsSync(updateImagePath)) fs.unlinkSync(updateImagePath)
             }
 
             const updatedProduct = await Products.update({
-                imagePath: filePath || updatingProduct.imagePath,
-                slugName: slugNameUpdate || slugName,
+                imagePath: imagePath || product.imagePath,
+                slugName,
                 title,
                 description,
                 price,
-            }, {where: {slugName}});
+            }, {where: {id}});
 
             res.json({
                 status: "ok",
@@ -338,15 +344,15 @@ export default class ProductsController {
                 throw HttpError(422, validate.error);
             }
 
-            const deletingProduct = await Products.findOne({where: {id}});
+            const product = await Products.findOne({where: {id}});
 
-            if (_.isEmpty(deletingProduct)) {
-                throw HttpError(403, "Not found product from that slug name");
+            if (_.isEmpty(product)) {
+                throw HttpError(403, "Not found product from that id.");
             }
 
-            const delImgPath = Products.getImgPath(deletingProduct.imagePath);
+            const delImagePath = Products.getImgPath(product.imagePath);
 
-            if (fs.existsSync(delImgPath)) fs.unlinkSync(delImgPath)
+            if (fs.existsSync(delImagePath)) fs.unlinkSync(delImagePath)
 
             await ProdCatRel.destroy({where: {productId: id}});
 

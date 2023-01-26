@@ -21,10 +21,6 @@ MapImages.init({
         type: DataTypes.FLOAT,
         allowNull: false,
     },
-    branchSlug: {
-        type: DataTypes.STRING(80),
-        allowNull: false,
-    },
 }, {
     sequelize,
     modelName: 'mapImages',

@@ -30,8 +30,8 @@ class AdminController {
             const {email, password} = req.body;
 
             const validate = Joi.object({
-                email: Validator.email(),
-                password: Validator.password(),
+                email: Validator.email(true),
+                password: Validator.password(true),
             }).validate({email, password});
 
             if (validate.error) {
@@ -91,20 +91,20 @@ class AdminController {
                 throw HttpError(403, 'Confirm password is wrong!');
             }
 
-            const existsAdmin = await Admin.findOne({ where: {email} });
+            const admin = await Admin.findOne({ where: {email} });
 
-            if (existsAdmin) {
-                if(existsAdmin.status === "deleted"){
-                    await Admin.destroy({where: {id: existsAdmin.id}});
+            if (admin) {
+                if(admin.status === "deleted"){
+                    await Admin.destroy({where: {id: admin.id}});
                 }else{
                     throw HttpError(422, 'Admin from this email already registered');
                 }
             }
 
             if(branchId){
-                const existBranch = await Map.findOne({where: {id: branchId}});
+                const branch = await Map.findOne({where: {id: branchId}});
 
-                if(_.isEmpty(existBranch)){
+                if(_.isEmpty(branch)){
                     throw HttpError(422, "Can't find branch from this id.");
                 }
             }
@@ -113,12 +113,12 @@ class AdminController {
             const redirectUrl = 'http://localhost:4000/admin/confirm';
 
             try {
-                const sendEmail = await Email.sendActivationEmail(email, confirmToken, redirectUrl);
+                await Email.sendActivationEmail(email, confirmToken, redirectUrl);
             }catch (e){
-                throw HttpError(422, {message: `Error in sending email message`});
+                throw HttpError(422, 'Error in sending email message');
             }
 
-            const createdAdmin = await Admin.create({
+            const registeredAdmin = await Admin.create({
                 firstName,
                 lastName,
                 email,
@@ -132,7 +132,7 @@ class AdminController {
 
             res.json({
                 status: 'ok',
-                createdAdmin
+                registeredAdmin
             });
         } catch (e) {
             next(e)
@@ -200,16 +200,16 @@ class AdminController {
                 throw HttpError(403, 'Admin deleted.');
             }
 
-            if(branchId !== null && branchId !== undefined){
-                const existBranch = await Map.findOne({where: {id: branchId}});
-
-                if(_.isEmpty(existBranch)){
-                    throw HttpError(422, "Can't find branch from this id.");
-                }
-            }
-
             if(role === 'admin' || role === 'admin manager'){
                 branchId = null;
+            }
+
+            if(branchId !== null && branchId !== undefined){
+                const branch = await Map.findOne({where: {id: branchId}});
+
+                if(_.isEmpty(branch)){
+                    throw HttpError(422, "Can't find branch from this id.");
+                }
             }
 
             if(admin.status === 'active'){
@@ -268,22 +268,46 @@ class AdminController {
     static modifyCurrentAccount = async (req, res, next) => {
         try {
             const {adminId} = req;
-            let {firstName, lastName, phoneNum} = req.body;
+            let {firstName, lastName, phoneNum, email} = req.body;
+            let status, confirmToken;
 
             const validate = Joi.object({
                 firstName: Validator.shortText(false),
                 lastName: Validator.shortText(false),
                 phoneNum: Validator.phone(false),
-            }).validate({firstName, lastName, phoneNum});
+                email: Validator.email(false),
+            }).validate({firstName, lastName, phoneNum, email});
 
             if (validate.error) {
                 throw HttpError(422, validate.error);
+            }
+
+            if(email){
+                const admin = await Admin.findOne({where: {email}});
+
+                if(!_.isEmpty(admin)){
+                    throw HttpError(403, "This email already exist.");
+                }
+
+                confirmToken = uuidV4();
+                const redirectUrl = 'http://localhost:4000/admin/confirm';
+
+                try {
+                    await Email.sendActivationEmail(email, confirmToken, redirectUrl);
+                }catch (e){
+                    throw HttpError(422, 'Error in sending email message');
+                }
+
+                status = 'pending';
             }
 
             const updatedAdmin = await Admin.update({
                 firstName,
                 lastName,
                 phoneNum,
+                email,
+                status,
+                confirmToken
             }, {where: {id: adminId, status: 'active'}});
 
             res.json({
@@ -349,14 +373,14 @@ class AdminController {
                 throw HttpError(422, validate.error);
             }
 
-            const forgetAdmin = await Admin.findOne({where: {email}});
+            const admin = await Admin.findOne({where: {email}});
 
-            if(_.isEmpty(forgetAdmin)){
-                throw HttpError(403, "Email isn't valid");
+            if(_.isEmpty(admin)){
+                throw HttpError(403, "Invalid email.");
             }
 
-            if(forgetAdmin.status !== 'active'){
-                throw HttpError(403, "Email isn't active. Please activate account by token from email before changing password");
+            if(admin.status !== 'active'){
+                throw HttpError(403, "Email isn't active.");
             }
 
             const confirmToken = uuidV4();
@@ -364,12 +388,12 @@ class AdminController {
             try {
                 await Email.sendPasswordChangeEmail(email, confirmToken);
             }catch (e){
-                throw HttpError(403, {message: `Error in sending email message`});
+                throw HttpError(403, 'Error in sending email message');
             }
 
             await Admin.update({
                 confirmToken,
-            }, {where: {id: forgetAdmin.id},});
+            }, {where: {id: admin.id},});
 
             res.json({
                 status: 'ok',
@@ -398,50 +422,33 @@ class AdminController {
                 throw HttpError(403, 'Invalid confirm password');
             }
 
-            const changeAdmin = await Admin.findOne({where: {email}});
+            const admin = await Admin.findOne({where: {email}});
 
-            if(_.isEmpty(changeAdmin)){
+            if(_.isEmpty(admin)){
                 throw HttpError(403, "Email isn't valid");
             }
 
-            if(changeAdmin.status !== 'active'){
+            if(admin.status !== 'active'){
                 throw HttpError(403, "Account isn't active");
             }
 
-            if(changeAdmin.confirmToken !== token){
+            if(admin.confirmToken !== token){
                 throw HttpError(403, "Invalid token");
             }
 
-            const updatedAccount = await Admin.update({
+            const account = await Admin.update({
                 confirmToken: null,
                 password,
-            }, {where: {id: changeAdmin.id},});
+            }, {where: {id: admin.id}});
 
             res.json({
                 status: 'ok',
-                user: updatedAccount,
+                account,
             });
         } catch (e) {
             next(e)
         }
     }
-
-    // static deleteCurrentAccount = async (req, res, next) => {
-    //     try {
-    //         const {adminId} = req;
-    //
-    //         const deletedAdmin = await Admin.update({
-    //             status: 'deleted'
-    //         }, {where: {id: adminId}});
-    //
-    //         res.json({
-    //             status: 'ok',
-    //             deletedAdmin
-    //         });
-    //     } catch (e) {
-    //         next(e)
-    //     }
-    // }
 }
 
 export default AdminController

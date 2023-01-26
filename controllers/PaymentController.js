@@ -36,10 +36,6 @@ export default {
 
     async setupStripeIntent(req, res, next) {
         try {
-            if (_.isEmpty(req)) {
-                throw HttpError(422);
-            }
-
             const {userId} = req;
             let customer = await checkCustomer(userId);
 
@@ -73,10 +69,6 @@ export default {
 
     async stripeCreateCard(req, res, next) {
         try {
-            if (_.isEmpty(req)) {
-                throw HttpError(422);
-            }
-
             const {number, exp_month, exp_year, cvc} = req.body;
             let paymentMethod;
 
@@ -117,10 +109,6 @@ export default {
 
     async stripeAttach(req, res, next) {
         try {
-            if (_.isEmpty(req)) {
-                throw HttpError(422);
-            }
-
             const {paymentMethodId} = req.body;
             const {userId} = req;
 
@@ -154,11 +142,12 @@ export default {
                 //todo stex cardi attach exnelu depqum jnjegy
                 //await paymentController.paymentMethods.detach(pm.id).then((d) => d).catch(() => null);
 
-                res.json({
-                    status: 'error',
-                    message: 'paymentMethodId already attached',
-                });
-                return;
+                //res.json({
+                //    status: 'error',
+                //    message: 'paymentMethodId already attached',
+                //});
+                //return;
+                throw HttpError(422, 'Payment Method already attached');
             }
 
             try {
@@ -247,10 +236,6 @@ export default {
 
     async stripeCharge(req, res, next) {
         try {
-            if (_.isEmpty(req)) {
-                throw HttpError(422);
-            }
-
             const {paymentMethodId, amount} = req.body;
             const {userId} = req;
 
@@ -307,10 +292,6 @@ export default {
 
     async stripeCardList(req, res, next) {
         try {
-            if (_.isEmpty(req)) {
-                throw HttpError(422);
-            }
-
             const {userId} = req;
             const customer = await checkCustomer(userId);
 
@@ -336,10 +317,6 @@ export default {
 
     async stripeCardSingle(req, res, next) {
         try {
-            if (_.isEmpty(req)) {
-                throw HttpError(422);
-            }
-
             const {paymentMethodId} = req.body;
             const {userId} = req;
 
@@ -363,7 +340,7 @@ export default {
 
             res.json({
                 card,
-                message: 'card list',
+                message: 'card single',
                 status: 'ok',
             });
         } catch (e) {
@@ -373,10 +350,6 @@ export default {
 
     async deleteStripeCard(req, res, next) {
         try {
-            if (_.isEmpty(req)) {
-                throw HttpError(422);
-            }
-
             const {paymentMethodId} = req.body;
             const {userId} = req;
 
@@ -408,10 +381,6 @@ export default {
 
     async deleteStripeCustomer(req, res, next) {
         try {
-            if (_.isEmpty(req)) {
-                throw HttpError(422);
-            }
-
             const {userId} = req;
             const customer = await checkCustomer(userId);
 

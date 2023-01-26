@@ -18,15 +18,17 @@ class Socket {
     }
 
     static #handleConnect = async (client) => {
+
         const {adminId} = client.decoded_token;
 
         client.join(`admin_${adminId}`);
         client.on('disconnect', this.#handleDisconnect(adminId));
+        console.log('connect');
     }
 
     static #handleDisconnect = (adminId) => async () => {
-        console.log('disconnect');
         this.io.emit('user-disconnect', { adminId });
+        console.log('disconnect');
     }
 
     static emitAdmin = (adminIds, event, data = {}) => {

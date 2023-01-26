@@ -59,7 +59,7 @@ export default class SlidesController {
             fs.renameSync(file.path, Slides.getImgPath(imagePath));
 
             const createdSlide = await Slides.create({
-                imagePath: imagePath,
+                imagePath
             });
 
             res.json({
@@ -87,24 +87,24 @@ export default class SlidesController {
                 throw HttpError(422, validate.error);
             }
 
-            const updatingSlide = await Slides.findOne({where: {id}});
-            let filePath = '';
+            const slide = await Slides.findOne({where: {id}});
+            let imagePath = '';
 
-            if(_.isEmpty(updatingSlide)){
+            if(_.isEmpty(slide)){
                 throw HttpError(403, "Not found slide from that id!");
             }
 
             if(!_.isEmpty(file) && ['image/png', 'image/jpeg'].includes(file.mimetype)){
-                filePath = path.join('files', uuidV4() + '-' + file.originalname);
-                const slideImgPath = Slides.getImgPath(updatingSlide.imagePath);
+                imagePath = path.join('files', uuidV4() + '-' + file.originalname);
+                const slideImagePath = Slides.getImgPath(slide.imagePath);
 
-                fs.renameSync(file.path, Slides.getImgPath(filePath));
+                fs.renameSync(file.path, Slides.getImgPath(imagePath));
 
-                if (fs.existsSync(slideImgPath)) fs.unlinkSync(slideImgPath)
+                if (fs.existsSync(slideImagePath)) fs.unlinkSync(slideImagePath)
             }
 
             const updatedSlide = await Slides.update({
-                imagePath: filePath || updatingSlide.imagePath,
+                imagePath: imagePath || slide.imagePath,
             }, {where: {id}});
 
             res.json({
@@ -131,15 +131,15 @@ export default class SlidesController {
                 throw HttpError(422, validate.error);
             }
 
-            const deletingSlide = await Slides.findOne({where: {id}});
+            const slide = await Slides.findOne({where: {id}});
 
-            if(_.isEmpty(deletingSlide)){
+            if(_.isEmpty(slide)){
                 throw HttpError(403, "Not found slide from that id!");
             }
 
-            const delImgPath = Slides.getImgPath(deletingSlide.imagePath);
+            const delImagePath = Slides.getImgPath(slide.imagePath);
 
-            if (fs.existsSync(delImgPath)) fs.unlinkSync(delImgPath)
+            if (fs.existsSync(delImagePath)) fs.unlinkSync(delImagePath)
 
             const deletedSlide = await Slides.destroy({where: {id}});
 

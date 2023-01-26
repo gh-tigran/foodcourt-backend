@@ -1,11 +1,11 @@
-import {Admin, OrderRel, Orders, Products, TempOrders, Users} from "../models";
+import {Admin, OrderRel, Orders, Products, TempOrders, Users, Map} from "../models";
 import Joi from "joi";
 import HttpError from "http-errors";
-import _ from "lodash";
 import {checkCustomer} from "./PaymentController";
 import {paymentController} from "./PaymentController";
 import Socket from "../services/Socket";
 import Validator from "../middlewares/Validator";
+import _ from 'lodash';
 
 class OrdersController {
     static getOrdersStatistics = async (req, res, next) => {
@@ -96,7 +96,7 @@ class OrdersController {
             const {id} = req.params;
 
             const validate = Joi.object({
-                id:  Validator.numGreatOne(true),
+                id: Validator.numGreatOne(true),
             }).validate({id});
 
             if (validate.error) {
@@ -162,11 +162,7 @@ class OrdersController {
 
     static addOrder = async (req, res, next) => {
         try {
-            if (_.isEmpty(req)) {
-                throw HttpError(422);
-            }
-
-            const {branchId, receiveType, message, productsList} = req.body;
+            let {branchId, receiveType, message, productsList} = req.body;
             let {address} = req.body;
             const {userId} = req;
 
@@ -182,29 +178,35 @@ class OrdersController {
                 throw HttpError(422, validate.error);
             }
 
-            if(receiveType === 'cashOnDelivery' && !address){
+            const branch = await Map.findOne({where: {id: branchId}});
+
+            if(_.isEmpty(branch)){
                 throw HttpError(422);
-            }else{
-                address = undefined;
             }
 
-            const newOrders = await Orders.bulkCreate([{
-                productId: 34,
+            if (receiveType === 'cashOnDelivery' && !address) {
+                throw HttpError(422);
+            } else if(receiveType !== 'cashOnDelivery') {
+                address = undefined;
+            }
+            //---todo es masy jnjel front sarqeluc heto
+            productsList = [{
+                productId: 77,
                 quantity: 5
             }, {
-                productId: 35,
+                productId: 78,
                 quantity: 6,
-            }]);
-
+            }];
+            //---todo es masy jnjel front sarqeluc heto
             //add order product
-            // const ordersList = productsList.map((product) => {
-            //     return {
-            //         productId: product.id,
-            //         quantity: product.quantity,
-            //     }
-            // });
-            //
-            // const newOrders = await Orders.bulkCreate(ordersList);
+            const ordersList = productsList.map((product) => {
+                return {
+                    productId: product.id,
+                    quantity: product.quantity,
+                }
+            });
+
+            const newOrders = await Orders.bulkCreate(ordersList);
             const orderIds = newOrders.map(order => order.id);
 
             let newTempOrder = await TempOrders.create({
@@ -227,8 +229,8 @@ class OrdersController {
             const admin = await Admin.findAll({
                 where: {
                     $or: [
-                        { branchId },
-                        { branchId: null },
+                        {branchId},
+                        {branchId: null},
                     ]
                 }
             });
@@ -268,11 +270,7 @@ class OrdersController {
 
     static addOrderByCard = async (req, res, next) => {
         try {
-            if (_.isEmpty(req)) {
-                throw HttpError(422);
-            }
-
-            const {paymentMethodId, amount, branchId, receiveType, message, productsList} = req.body;
+            let {paymentMethodId, amount, branchId, receiveType, message, productsList} = req.body;
             let {address} = req.body;
             const {userId} = req;
             let charge;
@@ -290,10 +288,10 @@ class OrdersController {
             if (validate.error) {
                 throw HttpError(422, validate.error);
             }
-
+            console.log(receiveType === 'cardOnDelivery' && !address);
             if (receiveType === 'cardOnDelivery' && !address) {
                 throw HttpError(422);
-            }else{
+            } else if(receiveType !== 'cardOnDelivery') {
                 address = undefined;
             }
 
@@ -302,6 +300,20 @@ class OrdersController {
             if (!customer) {
                 throw HttpError(422);
             }
+
+            const branch = await Map.findOne({where: {id: branchId}});
+
+            if(_.isEmpty(branch)){
+                throw HttpError(422);
+            }
+            //----todo front sarqeluc heto es masy jnjel
+            productsList = [{
+                id: 77,
+                quantity: 5
+            }, {
+                id: 78,
+                quantity: 6,
+            }];
 
             try {
                 charge = await paymentController.paymentIntents
@@ -329,23 +341,15 @@ class OrdersController {
             }
 
             if (charge.status === 'ok' && !charge.error) {
-                const newOrders = await Orders.bulkCreate([{
-                    productId: 34,
-                    quantity: 5
-                }, {
-                    productId: 35,
-                    quantity: 6,
-                }]);
-
                 //add order product
-                // const ordersList = productsList.map((product) => {
-                //     return {
-                //         productId: product.id,
-                //         quantity: product.quantity,
-                //     }
-                // });
-                //
-                // const newOrders = await Orders.bulkCreate(ordersList);
+                const ordersList = productsList.map((product) => {
+                    return {
+                        productId: product.id,
+                        quantity: product.quantity,
+                    }
+                });
+
+                const newOrders = await Orders.bulkCreate(ordersList);
                 const orderIds = newOrders.map(order => order.id);
 
                 let newTempOrder = await TempOrders.create({
@@ -368,8 +372,8 @@ class OrdersController {
                 const admin = await Admin.findAll({
                     where: {
                         $or: [
-                            { branchId },
-                            { branchId: null },
+                            {branchId},
+                            {branchId: null},
                         ]
                     }
                 });

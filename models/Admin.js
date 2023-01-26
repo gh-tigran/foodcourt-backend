@@ -24,15 +24,15 @@ Admin.init({
         allowNull: false
     },
     firstName: {
-        type: DataTypes.STRING(80),
+        type: DataTypes.STRING(50),
         allowNull: false
     },
     lastName: {
-        type: DataTypes.STRING(80),
+        type: DataTypes.STRING(50),
         allowNull: false
     },
     email: {
-        type: DataTypes.STRING(50),
+        type: DataTypes.STRING(100),
         unique: 'email',
         allowNull: false,
     },
@@ -41,7 +41,7 @@ Admin.init({
         allowNull: false,
         validate: {
             validator: function(v) {
-                return /^\d{11,}$/.test(v);
+                return /^\d{11,25}$/.test(v);
             },
         }
     },
@@ -60,7 +60,7 @@ Admin.init({
         defaultValue: 'manager'
     },
     confirmToken: {
-        type: DataTypes.STRING(80),
+        type: DataTypes.STRING(100),
         allowNull: true
     },
     password: {

@@ -18,13 +18,13 @@ ProdCatRel.init({
         type: DataTypes.BIGINT.UNSIGNED,
         allowNull: true,
         onUpdate: 'cascade',
-        onDelete: 'set null'
+        onDelete: 'set null',
     },
     categoryId: {
         type: DataTypes.BIGINT.UNSIGNED,
         allowNull: true,
         onUpdate: 'cascade',
-        onDelete: 'set null'
+        onDelete: 'set null',
     }
 }, {
     sequelize,

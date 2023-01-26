@@ -31,7 +31,7 @@ News.init({
         allowNull: false,
     },
     title: {
-        type: DataTypes.STRING(80),
+        type: DataTypes.STRING(50),
         allowNull: false,
     },
     description: {
@@ -39,7 +39,7 @@ News.init({
         allowNull: false,
     },
     slugName: {
-        type: DataTypes.STRING(80),
+        type: DataTypes.STRING(60),
         allowNull: false,
         unique: 'slugName',
     },

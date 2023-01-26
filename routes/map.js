@@ -6,9 +6,13 @@ import allowCurrent from "../middlewares/allowCurrent";
 const router = express.Router();
 
 router.get('/get/', MapController.getBranches);
-router.get('/get/:slugName', MapController.getSingleBranch);
+
+router.get('/get/:id', MapController.getSingleBranch);
+
 router.delete('/:id', allowCurrent('deleteBranch'), MapController.deleteBranch);
-router.put('/:slugName', allowCurrent('updateBranch'), uploader.array("images[]"), MapController.updateBranch);
+
+router.put('/:id', allowCurrent('updateBranch'), uploader.array("images[]"), MapController.updateBranch);
+
 router.post('/', allowCurrent('createBranch'), uploader.array("images[]"), MapController.createBranch);
 
 export default router;

@@ -11,9 +11,7 @@ class Categories extends Model {
 
         const sameSlugNameCategories = await Categories.findAll({where: {slugName}});
 
-        if(sameSlugNameCategories.length){
-            return '-';
-        }
+        if(sameSlugNameCategories.length) return '-';
 
         return slugName;
     };
@@ -31,11 +29,11 @@ Categories.init({
         allowNull: false,
     },
     name: {
-        type: DataTypes.STRING(80),
+        type: DataTypes.STRING(50),
         allowNull: false,
     },
     slugName: {
-        type: DataTypes.STRING(80),
+        type: DataTypes.STRING(60),
         allowNull: false,
         unique: 'slugName'
     },

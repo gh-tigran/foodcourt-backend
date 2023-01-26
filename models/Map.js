@@ -1,22 +1,9 @@
 import {DataTypes, Model} from "sequelize";
 import sequelize from "../services/sequelize";
 import path from "path";
-import slug from "slug";
 
 class Map extends Model {
     static getImgPath = (filePath) => path.join(__dirname, '../public/', filePath);
-
-    static generateSlug = async (title) => {
-        let slugName = slug(title);
-
-        const sameSlugNameMaps = await Map.findAll({where: {slugName}});
-
-        if(sameSlugNameMaps.length){
-            return '-';
-        }
-
-        return slugName;
-    }
 }
 
 Map.init({
@@ -35,7 +22,7 @@ Map.init({
         allowNull: false,
     },
     title: {
-        type: DataTypes.STRING(80),
+        type: DataTypes.STRING(50),
         allowNull: false,
     },
     location: {
@@ -43,19 +30,19 @@ Map.init({
         allowNull: false,
     },
     city: {
-        type: DataTypes.STRING(80),
+        type: DataTypes.STRING(50),
         allowNull: false,
     },
     country: {
-        type: DataTypes.STRING(80),
+        type: DataTypes.STRING(50),
         allowNull: false,
     },
-    phone: {
+    phoneNum: {
         type: DataTypes.STRING(),
         allowNull: false,
         validate: {
             validator: function(v) {
-                return /^\d{11,}$/.test(v);
+                return /^\d{11,25}$/.test(v);
             },
         }
     },
@@ -63,11 +50,6 @@ Map.init({
         type: DataTypes.ENUM('main', 'not main'),
         allowNull: false,
         defaultValue: 'not main'
-    },
-    slugName: {
-        type: DataTypes.STRING(80),
-        allowNull: false,
-        unique: 'slugName',
     },
 }, {
     sequelize,

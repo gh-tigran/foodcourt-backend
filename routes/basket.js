@@ -3,11 +3,11 @@ import BasketController from "../controllers/BasketController";
 import allowCurrent from "../middlewares/allowCurrent";
 
 const router = express.Router();
-router.get('/', allowCurrent('getBasket'), BasketController.getBasket);
+router.put('/:id', allowCurrent('updateBasketItem'), BasketController.updateBasketItem);
+
+router.delete('/:id', allowCurrent('removeFromBasket'), BasketController.removeFromBasket);
 
 router.post('/', allowCurrent('addToBasket'), BasketController.addToBasket);
 
-router.put('/', allowCurrent('updateBasketItem'), BasketController.updateBasketItem);
-
-router.delete('/', allowCurrent('removeFromBasket'), BasketController.removeFromBasket);
+router.get('/', allowCurrent('getBasket'), BasketController.getBasket);
 export default router;

@@ -39,11 +39,11 @@ class UserController {
                 throw HttpError(403, 'Confirm password is wrong!');
             }
 
-            const existsUser = await Users.findOne({ where: {email} });
+            const user = await Users.findOne({ where: {email} });
 
-            if (existsUser) {
-                if(existsUser.status === "deleted"){
-                    await Users.destroy({where: {id: existsUser.id}});
+            if (user) {
+                if(user.status === "deleted"){
+                    await Users.destroy({where: {id: user.id}});
                 }else{
                     throw HttpError(403, {email: `User from this email already registered`});
                 }
@@ -53,12 +53,12 @@ class UserController {
             const redirectUrl = 'http://localhost:4000/users/confirm';
 
             try {
-                const sendEmail = await Email.sendActivationEmail(email, confirmToken, redirectUrl);
+                await Email.sendActivationEmail(email, confirmToken, redirectUrl);
             }catch (e){
                 throw HttpError(403, {message: `Error in sending email message`});
             }
 
-            const user = await Users.create({
+            const registeredUser = await Users.create({
                 firstName,
                 lastName,
                 email,
@@ -70,7 +70,7 @@ class UserController {
 
             res.json({
                 status: 'ok',
-                user
+                registeredUser
             });
         } catch (e) {
             next(e)
@@ -93,7 +93,7 @@ class UserController {
             const user = await Users.findOne({ where: {email} });
 
             if (_.isEmpty(user) || user.getDataValue('password') !== Users.passwordHash(password)) {
-                throw HttpError(403, 'Wrong email or password');
+                throw HttpError(403, 'Invalid email or password');
             }
 
             if(user.status !== 'active'){
@@ -144,15 +144,9 @@ class UserController {
         }
     }
 
-    static list = async (req, res, next) => {
+    static list = async (req, res, next) =>  {
         try {
-            let {page = 1, limit = 10, name = ''} = req.query;
-            page = +page;
-            limit = +limit;
-            name = name.trim();
-            const offset = (page - 1) * limit;
-            let where = {};
-            if(!name) name = undefined;
+            let {page = 1, limit = 10, name} = req.query;
 
             const validate = Joi.object({
                 page: Validator.numGreatOne(true),
@@ -164,7 +158,13 @@ class UserController {
                 throw HttpError(422, validate.error);
             }
 
+            page = +page;
+            limit = +limit;
+            const offset = (page - 1) * limit;
+            let where = {};
+
             if (name) {
+                name = name.trim();
                 where.$or = [
                     seqU.where(seqU.fn("concat", seqU.col("firstName"),  ' ', seqU.col("lastName")), {
                         $like: `%${name}%`
@@ -296,13 +296,13 @@ class UserController {
                 throw HttpError(422, validate.error);
             }
 
-            const deletedAccount = await Users.update({
+            const blockedAccount = await Users.update({
                 status: 'blocked'
             }, {where: {id}});
 
             res.json({
                 status: 'ok',
-                deletedAccount
+                blockedAccount
             });
         } catch (e) {
             next(e)
@@ -321,14 +321,14 @@ class UserController {
                 throw HttpError(422, validate.error);
             }
 
-            const forgetAdmin = await Users.findOne({where: {email}});
+            const admin = await Users.findOne({where: {email}});
 
-            if(_.isEmpty(forgetAdmin)){
+            if(_.isEmpty(admin)){
                 throw HttpError(403, "Email isn't valid");
             }
 
-            if(forgetAdmin.confirmToken && forgetAdmin.status === 'pending'){
-                throw HttpError(403, "Email isn't active. Please activate account by token from email before changing password");
+            if(admin.confirmToken && admin.status === 'pending'){
+                throw HttpError(403, "Email isn't active.");
             }
 
             const confirmToken = uuidV4();
@@ -336,12 +336,12 @@ class UserController {
             try {
                 await Email.sendPasswordChangeEmail(email, confirmToken);
             }catch (e){
-                throw HttpError(403, {message: `Error in sending email message`});
+                throw HttpError(403, 'Error in sending email message');
             }
 
             await Users.update({
                 confirmToken,
-            }, {where: {id: forgetAdmin.id},});
+            }, {where: {id: admin.id},});
 
             res.json({
                 status: 'ok',
@@ -370,24 +370,24 @@ class UserController {
                 throw HttpError(403, "Invalid confirm password");
             }
 
-            const changeAdmin = await Users.findOne({where: {email}});
+            const admin = await Users.findOne({where: {email}});
 
-            if(_.isEmpty(changeAdmin)){
+            if(_.isEmpty(admin)){
                 throw HttpError(403, "Email isn't valid");
             }
 
-            if(changeAdmin.status !== 'active'){
+            if(admin.status !== 'active'){
                 throw HttpError(403, "Account isn't active");
             }
 
-            if(changeAdmin.confirmToken !== token){
+            if(admin.confirmToken !== token){
                 throw HttpError(403, "Invalid token");
             }
 
             const updatedAccount = await Users.update({
                 confirmToken: null,
                 password,
-            }, {where: {id: changeAdmin.id},});
+            }, {where: {id: admin.id},});
 
             res.json({
                 status: 'ok',

@@ -3,7 +3,6 @@ import PaymentController from "../controllers/PaymentController";
 import allowCurrent from "../middlewares/allowCurrent";
 
 const router = express.Router();
-
 router.get('/public-key', allowCurrent('paymentPublicKey'), PaymentController.getStripePublicKey);
 
 router.post('/setup-intent', allowCurrent('paymentSetupIntent'), PaymentController.setupStripeIntent);
@@ -23,5 +22,4 @@ router.get('/card-single', allowCurrent('paymentCardSingle'), PaymentController.
 router.delete('/card', allowCurrent('paymentDeleteCard'), PaymentController.deleteStripeCard);
 
 router.delete('/customer', allowCurrent('paymentDeleteCustomer'), PaymentController.deleteStripeCustomer);
-
 export default router;

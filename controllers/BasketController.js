@@ -44,31 +44,31 @@ export default class BasketController {
                 throw HttpError(422, validate.error);
             }
 
-            const prod = await Products.findOne({
+            const product = await Products.findOne({
                 where: { id: productId }
             });
 
-            if(_.isEmpty(prod)){
-                throw HttpError(403, 'Invalid product id!');
+            if(_.isEmpty(product)){
+                throw HttpError(403, 'Invalid product id.');
             }
 
-            const existBasket = await Basket.findOne({where: {productId}});
+            const basket = await Basket.findOne({where: {productId}});
 
-            if(!_.isEmpty(existBasket)){
-                quantity = +existBasket.quantity + +quantity;
+            if(!_.isEmpty(basket)){
+                quantity = +basket.quantity + +quantity;
 
-                const updatedItem = Basket.update({
+                const basketItem = Basket.update({
                     quantity
                 }, {where: {id: existBasket.id}})
 
                 res.json({
                     status: "ok",
-                    product: updatedItem,
+                    basketItem,
                 });
                 return;
             }
 
-            const addedProd = await Basket.create({
+            const basketItem = await Basket.create({
                 userId,
                 productId,
                 quantity
@@ -76,7 +76,7 @@ export default class BasketController {
 
             res.json({
                 status: "ok",
-                product: addedProd
+                basketItem
             });
         } catch (e) {
             next(e);
@@ -85,7 +85,8 @@ export default class BasketController {
 
     static updateBasketItem = async (req, res, next) => {
         try {
-            const {id, quantity} = req.body;
+            const {quantity} = req.body;
+            const {id} = req.params;
 
             const validate = Joi.object({
                 id: Validator.numGreatOne(true),
@@ -96,7 +97,7 @@ export default class BasketController {
                 throw HttpError(422, validate.error);
             }
 
-            const basketProduct = await Basket.findOne({
+            const basketItem = await Basket.findOne({
                 where: { id },
                 include: [{
                     model: Products,
@@ -105,8 +106,8 @@ export default class BasketController {
                 }]
             });
 
-            if(_.isEmpty(basketProduct)){
-                throw HttpError(403, 'Invalid id!');
+            if(_.isEmpty(basketItem)){
+                throw HttpError(403, 'Invalid id.');
             }
 
             const updatedItem = Basket.update({
@@ -124,7 +125,7 @@ export default class BasketController {
 
     static removeFromBasket = async (req, res, next) => {
         try {
-            const {id} = req.body;
+            const {id} = req.params;
 
             const validate = Joi.object({
                 id: Validator.numGreatOne(true),

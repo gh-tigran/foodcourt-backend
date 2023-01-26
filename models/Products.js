@@ -38,7 +38,7 @@ Products.init({
         allowNull: false,
     },
     title: {
-        type: DataTypes.STRING(80),
+        type: DataTypes.STRING(50),
         allowNull: false,
     },
     description: {
@@ -46,11 +46,11 @@ Products.init({
         allowNull: false,
     },
     price: {
-        type: DataTypes.INTEGER(),
+        type: DataTypes.INTEGER,
         allowNull: false,
     },
     slugName: {
-        type: DataTypes.STRING(80),
+        type: DataTypes.STRING(60),
         allowNull: false,
         unique: 'slugName',
     },
@@ -63,19 +63,5 @@ Products.init({
     modelName: 'products',
     tableName: 'products'
 });
-
-// Products.belongsTo(Categories, {
-//     foreignKey: 'categoryId',
-//     as: 'category',
-//     onUpdate: 'cascade',
-//     onDelete: 'cascade'
-// });
-//
-// Categories.hasMany(Products, {
-//     foreignKey: 'categoryId',
-//     as: 'products',
-//     onUpdate: 'cascade',
-//     onDelete: 'cascade'
-// });
 
 export default Products;
