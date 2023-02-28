@@ -49,8 +49,18 @@ export default class SlidesController {
     static createSlide = async (req, res, next) => {
         try {
             const {file} = req;
+            const {title, description} = req.body;
 
-            if(_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)){
+            const validate = Joi.object({
+                title: Validator.shortText(false),
+                description: Validator.longText(false),
+            }).validate({title, description});
+
+            if (validate.error) {
+                throw HttpError(422, validate.error);
+            }
+
+            if (_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)) {
                 throw HttpError(422, "Doesn't sent image!");
             }
 
@@ -59,7 +69,9 @@ export default class SlidesController {
             fs.renameSync(file.path, Slides.getImgPath(imagePath));
 
             const createdSlide = await Slides.create({
-                imagePath
+                imagePath,
+                title,
+                description
             });
 
             res.json({
@@ -78,10 +90,13 @@ export default class SlidesController {
         try {
             const {file} = req;
             const {id} = req.params;
+            const {title, description} = req.body;
 
             const validate = Joi.object({
                 id: Validator.numGreatOne(true),
-            }).validate({id});
+                title: Validator.shortText(false),
+                description: Validator.longText(false),
+            }).validate({id, title, description});
 
             if (validate.error) {
                 throw HttpError(422, validate.error);
@@ -90,11 +105,11 @@ export default class SlidesController {
             const slide = await Slides.findOne({where: {id}});
             let imagePath = '';
 
-            if(_.isEmpty(slide)){
+            if (_.isEmpty(slide)) {
                 throw HttpError(403, "Not found slide from that id!");
             }
 
-            if(!_.isEmpty(file) && ['image/png', 'image/jpeg'].includes(file.mimetype)){
+            if (!_.isEmpty(file) && ['image/png', 'image/jpeg'].includes(file.mimetype)) {
                 imagePath = path.join('files', uuidV4() + '-' + file.originalname);
                 const slideImagePath = Slides.getImgPath(slide.imagePath);
 
@@ -105,6 +120,8 @@ export default class SlidesController {
 
             const updatedSlide = await Slides.update({
                 imagePath: imagePath || slide.imagePath,
+                title,
+                description
             }, {where: {id}});
 
             res.json({
@@ -133,7 +150,7 @@ export default class SlidesController {
 
             const slide = await Slides.findOne({where: {id}});
 
-            if(_.isEmpty(slide)){
+            if (_.isEmpty(slide)) {
                 throw HttpError(403, "Not found slide from that id!");
             }
 

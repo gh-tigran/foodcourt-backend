@@ -122,15 +122,25 @@ export default class ProductsController {
                     required: true,
                     where: {
                         slugName: categorySlug
-                    }
+                    },
+                    attributes: [],
                 }],
-                attributes: []
+                attributes: ['id'],
             });
 
             const totalPages = Math.ceil(count.length / limit);
             const orderTypes = Products.getOrderTypes();
             const products = await Products.findAll({
-                where,
+                where: {
+                    ...where,
+                    $or: [
+                        ...count.map(prod => {
+                            return {
+                                id: prod.id
+                            }
+                        })
+                    ]
+                },
                 include: [{
                     model: Categories,
                     as: 'categories',
@@ -217,7 +227,7 @@ export default class ProductsController {
 
             const slugName = await Products.generateSlug(title);
 
-            if(slugName === '-'){
+            if (slugName === '-') {
                 throw HttpError(403, 'Invalid title');
             }
 
@@ -297,7 +307,7 @@ export default class ProductsController {
             if (title && title !== product.title) {
                 slugName = await Products.generateSlug(title);
 
-                if(slugName === '-'){
+                if (slugName === '-') {
                     throw HttpError(403, 'Invalid title');
                 }
             }

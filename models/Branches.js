@@ -2,11 +2,11 @@ import {DataTypes, Model} from "sequelize";
 import sequelize from "../services/sequelize";
 import path from "path";
 
-class Map extends Model {
+class Branches extends Model {
     static getImgPath = (filePath) => path.join(__dirname, '../public/', filePath);
 }
 
-Map.init({
+Branches.init({
     id: {
         type: DataTypes.BIGINT.UNSIGNED,
         primaryKey: true,
@@ -57,4 +57,4 @@ Map.init({
     tableName: 'map'
 });
 
-export default Map;
+export default Branches;

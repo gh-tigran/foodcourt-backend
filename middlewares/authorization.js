@@ -23,6 +23,8 @@ const EXCLUDE = [
     '/slides/get',
     '/news/get',
     '/map/get',
+
+    '/payment/public-key'
 ];
 
 export default async function authorization(req, res, next) {
@@ -41,12 +43,13 @@ export default async function authorization(req, res, next) {
 
             userId = data.userId;
             adminId = data.adminId;
-        } catch (e) {}
+        } catch (e) {
+        }
 
         if (userId) {
             const user = await Users.findOne({where: {id: userId, status: 'active'}});
 
-            if(_.isEmpty(user)){
+            if (_.isEmpty(user)) {
                 throw HttpError(401);
             }
 
@@ -58,7 +61,7 @@ export default async function authorization(req, res, next) {
         if (adminId) {
             const admin = await Admin.findOne({where: {id: adminId, status: 'active'}});
 
-            if(_.isEmpty(admin)){
+            if (_.isEmpty(admin)) {
                 throw HttpError(401);
             }
 

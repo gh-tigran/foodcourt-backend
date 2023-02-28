@@ -45,17 +45,17 @@ class UserController {
                 if(user.status === "deleted"){
                     await Users.destroy({where: {id: user.id}});
                 }else{
-                    throw HttpError(403, {email: `User from this email already registered`});
+                    throw HttpError(403, 'User from this email already registered');
                 }
             }
 
             const confirmToken = uuidV4();
-            const redirectUrl = 'http://localhost:4000/users/confirm';
+            const redirectUrl = 'http://localhost:3000/users/confirm';
 
             try {
                 await Email.sendActivationEmail(email, confirmToken, redirectUrl);
             }catch (e){
-                throw HttpError(403, {message: `Error in sending email message`});
+                throw HttpError(403, 'Error in sending email message');
             }
 
             const registeredUser = await Users.create({
@@ -239,24 +239,50 @@ class UserController {
 
     static modifyCurrentAccount = async (req, res, next) => {
         try {
-            const {firstName, lastName, phoneNum} = req.body;
+            const {firstName, lastName, phoneNum, email} = req.body;
             const {userId} = req;
+            let status, confirmToken;
 
             const validate = Joi.object({
                 firstName:  Validator.shortText(false),
                 lastName: Validator.shortText(false),
                 phoneNum: Validator.phone(false),
-            }).validate({firstName, lastName, phoneNum});
+                email: Validator.email(false),
+            }).validate({firstName, lastName, phoneNum, email});
 
             if (validate.error) {
                 throw HttpError(422, validate.error);
             }
 
-            const updatedAccount = await Users.update({
+            if (email) {
+                const user = await Users.findOne({where: {email}});
+
+                if (!_.isEmpty(user)) {
+                    throw HttpError(403, "This email already exist.");
+                }
+
+                confirmToken = uuidV4();
+                const redirectUrl = 'http://localhost:3000/users/confirm';
+
+                try {
+                    await Email.sendActivationEmail(email, confirmToken, redirectUrl);
+                } catch (e) {
+                    throw HttpError(422, 'Error in sending email message');
+                }
+
+                status = 'pending';
+            }
+
+            await Users.update({
                 firstName,
                 lastName,
                 phoneNum,
+                email,
+                status,
+                confirmToken
             }, {where: {id: userId},});
+
+            const updatedAccount = await Users.findOne({where: {id: userId}})
 
             res.json({
                 status: 'ok',
@@ -284,25 +310,26 @@ class UserController {
         }
     }
 
-    static blockAccount = async (req, res, next) => {
+    static changeAccountStatus = async (req, res, next) => {
         try {
             const {id} = req.params;
+            const {status} = req.body;
 
             const validate = Joi.object({
                 id: Validator.numGreatOne(true),
-            }).validate({id});
+                status: Joi.string().valid('blocked', 'active').required(),
+            }).validate({id, status});
 
             if (validate.error) {
                 throw HttpError(422, validate.error);
             }
 
-            const blockedAccount = await Users.update({
-                status: 'blocked'
+            await Users.update({
+                status,
             }, {where: {id}});
 
             res.json({
                 status: 'ok',
-                blockedAccount
             });
         } catch (e) {
             next(e)

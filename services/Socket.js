@@ -23,12 +23,10 @@ class Socket {
 
         client.join(`admin_${adminId}`);
         client.on('disconnect', this.#handleDisconnect(adminId));
-        console.log('connect');
     }
 
     static #handleDisconnect = (adminId) => async () => {
         this.io.emit('user-disconnect', { adminId });
-        console.log('disconnect');
     }
 
     static emitAdmin = (adminIds, event, data = {}) => {

@@ -1,4 +1,4 @@
-import {Admin, OrderRel, Orders, Products, TempOrders, Users, Map} from "../models";
+import {Admin, OrderRel, Orders, Products, TempOrders, Users, Map, Basket} from "../models";
 import Joi from "joi";
 import HttpError from "http-errors";
 import {checkCustomer} from "./PaymentController";
@@ -170,9 +170,9 @@ class OrdersController {
                 branchId: Validator.numGreatOne(true),
                 receiveType: Joi.string().valid('cashOnDelivery', 'onBranch'),
                 message: Validator.longText(false),
-                address: Validator.shortText(false),
-                //productsList: Validator.productList(true),
-            }).validate({branchId, receiveType, message, address, /*productsList*/});
+                address: Validator.shortText(receiveType === 'cashOnDelivery'),
+                productsList: Validator.productList(true),
+            }).validate({branchId, receiveType, message, address, productsList});
 
             if (validate.error) {
                 throw HttpError(422, validate.error);
@@ -189,24 +189,8 @@ class OrdersController {
             } else if(receiveType !== 'cashOnDelivery') {
                 address = undefined;
             }
-            //---todo es masy jnjel front sarqeluc heto
-            productsList = [{
-                productId: 77,
-                quantity: 5
-            }, {
-                productId: 78,
-                quantity: 6,
-            }];
-            //---todo es masy jnjel front sarqeluc heto
-            //add order product
-            const ordersList = productsList.map((product) => {
-                return {
-                    productId: product.id,
-                    quantity: product.quantity,
-                }
-            });
 
-            const newOrders = await Orders.bulkCreate(ordersList);
+            const newOrders = await Orders.bulkCreate(productsList);
             const orderIds = newOrders.map(order => order.id);
 
             let newTempOrder = await TempOrders.create({
@@ -259,6 +243,10 @@ class OrdersController {
 
             Socket.emitAdmin(adminIds, 'new-order', {order: newTempOrder});
 
+            await Basket.destroy({
+                where: {userId}
+            })
+
             res.json({
                 status: 'ok',
                 newTempOrder
@@ -288,7 +276,7 @@ class OrdersController {
             if (validate.error) {
                 throw HttpError(422, validate.error);
             }
-            console.log(receiveType === 'cardOnDelivery' && !address);
+
             if (receiveType === 'cardOnDelivery' && !address) {
                 throw HttpError(422);
             } else if(receiveType !== 'cardOnDelivery') {
@@ -400,6 +388,10 @@ class OrdersController {
                 });
 
                 Socket.emitAdmin(adminIds, 'new-order', {order: newTempOrder});
+
+                await Basket.destroy({
+                    where: {userId}
+                })
             }
 
             res.json({

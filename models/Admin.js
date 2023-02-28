@@ -1,7 +1,7 @@
 import {DataTypes, Model} from "sequelize";
 import sequelize from "../services/sequelize";
 import md5 from "md5";
-import Map from "./Map";
+import Branches from "./Branches";
 
 const {PASSWORD_SECRET} = process.env;
 
@@ -48,6 +48,8 @@ Admin.init({
     branchId: {
         type: DataTypes.BIGINT.UNSIGNED,
         allowNull: true,
+        onUpdate: 'cascade',
+        onDelete: 'set null',
     },
     status: {
         type: DataTypes.ENUM('active', 'pending', 'deleted'),
@@ -81,18 +83,18 @@ Admin.init({
     tableName: 'admin'
 });
 
-Map.hasMany(Admin, {
+Branches.hasMany(Admin, {
     foreignKey: 'branchId',
     as: 'admins',
-    onDelete: 'cascade',
-    onUpdate: 'cascade',
+    onDelete: 'NO ACTION',
+    onUpdate: 'NO ACTION',
 });
 
-Admin.belongsTo(Map, {
+Admin.belongsTo(Branches, {
     foreignKey: 'branchId',
     as: 'branch',
-    onDelete: 'cascade',
-    onUpdate: 'cascade',
+    onDelete: 'NO ACTION',
+    onUpdate: 'NO ACTION',
 });
 
 export default Admin;

@@ -3,7 +3,7 @@ import PaymentController from "../controllers/PaymentController";
 import allowCurrent from "../middlewares/allowCurrent";
 
 const router = express.Router();
-router.get('/public-key', allowCurrent('paymentPublicKey'), PaymentController.getStripePublicKey);
+router.get('/public-key', PaymentController.getStripePublicKey);
 
 router.post('/setup-intent', allowCurrent('paymentSetupIntent'), PaymentController.setupStripeIntent);
 

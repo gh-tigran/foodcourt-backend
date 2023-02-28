@@ -1,4 +1,4 @@
-import {Map, MapImages} from "../models";
+import {Admin, Map, MapImages} from "../models";
 import path from "path";
 import fs from "fs";
 import {v4 as uuidV4} from "uuid";
@@ -7,7 +7,7 @@ import _ from "lodash";
 import Joi from "joi";
 import Validator from "../middlewares/Validator";
 
-export default class MapController {
+export default class BranchController {
     static getBranches = async (req, res, next) => {
         try {
             const branches = await Map.findAll({
@@ -102,7 +102,7 @@ export default class MapController {
             }
 
             const mainBranch = await Map.findOne({
-                where: { main: 'main' }
+                where: {main: 'main'}
             });
 
             const createdBranch = await Map.create({
@@ -150,27 +150,42 @@ export default class MapController {
         try {
             const {files} = req;
             const {id} = req.params;
-            const {lat, lon, title, location} = req.body;
+            const {
+                lat,
+                lon,
+                title,
+                location,
+                country,
+                city,
+                phoneNum,
+                main,
+                notDeleteImageIdList
+            } = req.body;
+            let where = {};
+            let branchFromSameCoords = {};
 
             const validate = Joi.object({
-                id: Validator.numGreatOne(true),
-                lat: Joi.number().min(0),
-                lon: Joi.number().min(0),
+                lat: Joi.number().required(),
+                lon: Joi.number().required(),
                 title: Validator.shortText(false),
                 location: Validator.shortText(false),
-            }).validate({id, lat, lon, title, location});
+                city: Validator.shortText(false),
+                country: Validator.shortText(false),
+                phoneNum: Validator.phone(false),
+            }).validate({lat, lon, title, location, city, country, phoneNum});
 
             if (validate.error) {
                 throw HttpError(422, validate.error);
             }
 
-            let where = {};
-            let branchFromSameCoords = {};
-
             if (lat && lon) where = {lat, lon};
 
             if (!_.isEmpty(where)) {
                 branchFromSameCoords = await Map.findOne({where});
+            }
+
+            if (branchFromSameCoords && +branchFromSameCoords.id !== +id) {
+                throw HttpError(403, "Branch from that coords already exist!!!");
             }
 
             const branch = await Map.findOne({
@@ -186,38 +201,48 @@ export default class MapController {
                 throw HttpError(403, "Not found branch from that id");
             }
 
-            if (branchFromSameCoords && branchFromSameCoords.id !== id) {
-                throw HttpError(403, "Branch from that coords already exist!!!");
-            }
+            if(!_.isEmpty(notDeleteImageIdList) || !_.isEmpty(files)){
+                branch.images.forEach(image => {
+                    const delImagePath = Map.getImgPath(image.name);
+                    if (fs.existsSync(delImagePath) && ((notDeleteImageIdList && !notDeleteImageIdList.includes(`${image.id}`)) || !notDeleteImageIdList)) fs.unlinkSync(delImagePath);
+                });
 
-            if (!_.isEmpty(files)) {
-                const imageFile = files.find(file => ['image/png', 'image/jpeg'].includes(file.mimetype));
+                await MapImages.destroy({
+                    where: {
+                        branchId: id,
+                        $and: notDeleteImageIdList ? notDeleteImageIdList.map(tempId => {
+                            return {id: {['$not']: tempId}}
+                        }) : []
+                    }
+                });
 
-                if (!_.isEmpty(imageFile)) {
-                    const imagesData = files.map(file => {
-                        if (['image/png', 'image/jpeg'].includes(file.mimetype)) {
-                            const fileName = uuidV4() + '-' + file.originalname;
-                            const imagePath = path.join('files', fileName);
+                if (!_.isEmpty(files)) {
+                    const imageFile = files.find(file => ['image/png', 'image/jpeg'].includes(file.mimetype));
 
-                            fs.renameSync(file.path, Map.getImgPath(imagePath));
+                    if (!_.isEmpty(imageFile)) {
+                        const imagesData = files.map(file => {
+                            if (['image/png', 'image/jpeg'].includes(file.mimetype)) {
+                                const imageName = uuidV4() + '-' + file.originalname;
+                                const imagePath = path.join('files', imageName);
 
-                            return {
-                                name: imagePath,
-                                size: file.size,
-                                branchId: branch.id,
+                                fs.renameSync(file.path, Map.getImgPath(imagePath));
+
+                                return {
+                                    name: imagePath,
+                                    size: file.size,
+                                    branchId: branch.id,
+                                }
                             }
-                        }
-                    });
+                        });
 
-                    await MapImages.destroy({where: {branchId: id}});
-                    await MapImages.bulkCreate(imagesData);
-
-                    branch.images.forEach((image) => {
-                        const delImagePath = Map.getImgPath(image.name);
-                        if (fs.existsSync(delImagePath)) fs.unlinkSync(delImagePath);
-                    });
+                        await MapImages.bulkCreate(imagesData);
+                    }
                 }
             }
+
+            const mainBranch = await Map.findOne({
+                where: {main: 'main', id: {$not: id}}
+            });
 
             const updatedBranch = await Map.update(
                 {
@@ -225,6 +250,11 @@ export default class MapController {
                     lon,
                     title,
                     location,
+                    country,
+                    city,
+                    phoneNum,
+                    main: (main === true || main === 'true') && _.isEmpty(mainBranch) ?
+                        'main' : 'not main'
                 },
                 {where: {id}}
             );

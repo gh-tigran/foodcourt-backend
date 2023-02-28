@@ -1,12 +1,12 @@
 import {DataTypes, Model} from "sequelize";
 import sequelize from "../services/sequelize";
-import Map from "./Map";
+import Branches from "./Branches";
 
-class MapImages extends Model {
+class BranchImages extends Model {
 
 }
 
-MapImages.init({
+BranchImages.init({
     id: {
         type: DataTypes.BIGINT.UNSIGNED,
         primaryKey: true,
@@ -27,18 +27,18 @@ MapImages.init({
     tableName: 'mapImages'
 });
 
-MapImages.belongsTo(Map, {
+BranchImages.belongsTo(Branches, {
     foreignKey: 'branchId',
     as: 'branch',
     onUpdate: 'cascade',
     onDelete: 'cascade'
 });
 
-Map.hasMany(MapImages, {
+Branches.hasMany(BranchImages, {
     foreignKey: 'branchId',
     as: 'images',
     onUpdate: 'cascade',
     onDelete: 'cascade'
 });
 
-export default MapImages;
+export default BranchImages;

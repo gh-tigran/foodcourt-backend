@@ -31,5 +31,5 @@ router.get('/', allowCurrent('usersList'), UserController.list);
 
 router.get('/:id', allowCurrent('userSingle'), UserController.single);
 
-router.delete('/:id', allowCurrent('userBlock'), UserController.blockAccount);
+router.post('/:id', allowCurrent('userChangeStatus'), UserController.changeAccountStatus);
 export default router;

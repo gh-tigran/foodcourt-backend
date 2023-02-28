@@ -1,15 +1,15 @@
 import HttpError from "http-errors";
 
 const notAllowAdmin = [
-    'paymentPublicKey', 'paymentSetupIntent', 'paymentCreateCard', 'paymentAttach', 'paymentCharge', 'paymentCardList', 'paymentCardSingle', 'paymentDeleteCard', 'paymentDeleteCustomer',
+    'paymentSetupIntent', 'paymentCreateCard', 'paymentAttach', 'paymentCharge', 'paymentCardList', 'paymentCardSingle', 'paymentDeleteCard', 'paymentDeleteCustomer',
     'getBasket', 'addToBasket', 'updateBasketItem', 'removeFromBasket',
     'userCurrent', 'userModifyCurrent', 'userDeleteCurrent',
     'orderAdd', 'ordersListUser',
 ];
 
 const notAllowAdminManager = [
-    'paymentPublicKey', 'paymentSetupIntent', 'paymentCreateCard', 'paymentAttach', 'paymentCharge', 'paymentCardList', 'paymentCardSingle', 'paymentDeleteCard', 'paymentDeleteCustomer',
-    'userCurrent', 'userDeleteCurrent', 'userModifyCurrent', 'userBlock', 'userSingle', 'usersList',
+    'paymentSetupIntent', 'paymentCreateCard', 'paymentAttach', 'paymentCharge', 'paymentCardList', 'paymentCardSingle', 'paymentDeleteCard', 'paymentDeleteCustomer',
+    'userCurrent', 'userDeleteCurrent', 'userModifyCurrent', 'userChangeStatus', 'userSingle', 'usersList',
     'adminRegister', 'adminsList', 'adminSingle', 'adminDelete', 'adminModify',
     'getBasket', 'addToBasket', 'updateBasketItem', 'removeFromBasket',
     'orderAdd', 'ordersListUser',
@@ -21,7 +21,7 @@ const allowManager = [
 ];
 
 const allowUser = [
-    'paymentPublicKey', 'paymentSetupIntent', 'paymentCreateCard', 'paymentAttach', 'paymentCharge', 'paymentCardList', 'paymentCardSingle', 'paymentDeleteCard', 'paymentDeleteCustomer',
+    'paymentSetupIntent', 'paymentCreateCard', 'paymentAttach', 'paymentCharge', 'paymentCardList', 'paymentCardSingle', 'paymentDeleteCard', 'paymentDeleteCustomer',
     'getBasket', 'addToBasket', 'updateBasketItem', 'removeFromBasket',
     'userCurrent', 'userModifyCurrent', 'userDeleteCurrent',
     'orderAdd', 'ordersListUser',

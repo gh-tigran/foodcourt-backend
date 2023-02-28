@@ -2,7 +2,7 @@ import {Admin, Map} from "../models";
 import jwt from "jsonwebtoken";
 import HttpError from "http-errors";
 import Joi from "joi";
-import { v4 as uuidV4 } from "uuid";
+import {v4 as uuidV4} from "uuid";
 import Email from "../services/Email";
 import _ from "lodash";
 import Validator from "../middlewares/Validator";
@@ -14,7 +14,7 @@ class AdminController {
         try {
             const {adminId} = req;
 
-            const admin = await Admin.findOne({ where: {id: adminId} });
+            const admin = await Admin.findOne({where: {id: adminId}});
 
             res.json({
                 status: 'ok',
@@ -38,9 +38,9 @@ class AdminController {
                 throw new HttpError(422, validate.error);
             }
 
-            const admin = await Admin.findOne({ where: {email} });
+            const admin = await Admin.findOne({where: {email}});
 
-            if (_.isEmpty(admin)  || admin.getDataValue('password') !== Admin.passwordHash(password)) {
+            if (_.isEmpty(admin) || admin.getDataValue('password') !== Admin.passwordHash(password)) {
                 throw HttpError(403, 'Invalid login or password');
             }
 
@@ -91,20 +91,20 @@ class AdminController {
                 throw HttpError(403, 'Confirm password is wrong!');
             }
 
-            const admin = await Admin.findOne({ where: {email} });
+            const admin = await Admin.findOne({where: {email}});
 
             if (admin) {
-                if(admin.status === "deleted"){
+                if (admin.status === "deleted") {
                     await Admin.destroy({where: {id: admin.id}});
-                }else{
+                } else {
                     throw HttpError(422, 'Admin from this email already registered');
                 }
             }
 
-            if(branchId){
+            if (branchId) {
                 const branch = await Map.findOne({where: {id: branchId}});
 
-                if(_.isEmpty(branch)){
+                if (_.isEmpty(branch)) {
                     throw HttpError(422, "Can't find branch from this id.");
                 }
             }
@@ -114,7 +114,7 @@ class AdminController {
 
             try {
                 await Email.sendActivationEmail(email, confirmToken, redirectUrl);
-            }catch (e){
+            } catch (e) {
                 throw HttpError(422, 'Error in sending email message');
             }
 
@@ -141,7 +141,7 @@ class AdminController {
 
     static confirm = async (req, res, next) => {
         try {
-            const { email, token } = req.query;
+            const {email, token} = req.query;
 
             const validate = Joi.object({
                 email: Validator.email(true),
@@ -196,23 +196,23 @@ class AdminController {
 
             const admin = await Admin.findOne({where: {id}});
 
-            if(admin.status === 'deleted'){
+            if (admin.status === 'deleted') {
                 throw HttpError(403, 'Admin deleted.');
             }
 
-            if(role === 'admin' || role === 'admin manager'){
+            if (role === 'admin' || role === 'admin manager') {
                 branchId = null;
             }
 
-            if(branchId !== null && branchId !== undefined){
+            if (branchId !== null && branchId !== undefined) {
                 const branch = await Map.findOne({where: {id: branchId}});
 
-                if(_.isEmpty(branch)){
+                if (_.isEmpty(branch)) {
                     throw HttpError(422, "Can't find branch from this id.");
                 }
             }
 
-            if(admin.status === 'active'){
+            if (admin.status === 'active') {
                 firstName = undefined;
                 lastName = undefined;
                 phoneNum = undefined;
@@ -248,7 +248,7 @@ class AdminController {
                 throw HttpError(422, validate.error);
             }
 
-            if(id === adminId){
+            if (id === adminId) {
                 throw HttpError(403);
             }
 
@@ -282,10 +282,10 @@ class AdminController {
                 throw HttpError(422, validate.error);
             }
 
-            if(email){
+            if (email) {
                 const admin = await Admin.findOne({where: {email}});
 
-                if(!_.isEmpty(admin)){
+                if (!_.isEmpty(admin)) {
                     throw HttpError(403, "This email already exist.");
                 }
 
@@ -294,14 +294,14 @@ class AdminController {
 
                 try {
                     await Email.sendActivationEmail(email, confirmToken, redirectUrl);
-                }catch (e){
+                } catch (e) {
                     throw HttpError(422, 'Error in sending email message');
                 }
 
                 status = 'pending';
             }
 
-            const updatedAdmin = await Admin.update({
+            await Admin.update({
                 firstName,
                 lastName,
                 phoneNum,
@@ -309,6 +309,8 @@ class AdminController {
                 status,
                 confirmToken
             }, {where: {id: adminId, status: 'active'}});
+
+            const updatedAdmin = await Admin.findOne({where: {id: adminId}});
 
             res.json({
                 status: 'ok',
@@ -350,7 +352,7 @@ class AdminController {
                 throw HttpError(403, validate.error);
             }
 
-            const admin = await Admin.findOne({ where: {id} });
+            const admin = await Admin.findOne({where: {id}});
 
             res.json({
                 status: 'ok',
@@ -375,11 +377,11 @@ class AdminController {
 
             const admin = await Admin.findOne({where: {email}});
 
-            if(_.isEmpty(admin)){
+            if (_.isEmpty(admin)) {
                 throw HttpError(403, "Invalid email.");
             }
 
-            if(admin.status !== 'active'){
+            if (admin.status !== 'active') {
                 throw HttpError(403, "Email isn't active.");
             }
 
@@ -387,7 +389,7 @@ class AdminController {
 
             try {
                 await Email.sendPasswordChangeEmail(email, confirmToken);
-            }catch (e){
+            } catch (e) {
                 throw HttpError(403, 'Error in sending email message');
             }
 
@@ -424,15 +426,15 @@ class AdminController {
 
             const admin = await Admin.findOne({where: {email}});
 
-            if(_.isEmpty(admin)){
+            if (_.isEmpty(admin)) {
                 throw HttpError(403, "Email isn't valid");
             }
 
-            if(admin.status !== 'active'){
+            if (admin.status !== 'active') {
                 throw HttpError(403, "Account isn't active");
             }
 
-            if(admin.confirmToken !== token){
+            if (admin.confirmToken !== token) {
                 throw HttpError(403, "Invalid token");
             }
 

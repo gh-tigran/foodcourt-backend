@@ -1,6 +1,6 @@
 import {DataTypes, Model} from "sequelize";
 import sequelize from "../services/sequelize";
-import Map from "./Map";
+import Branches from "./Branches";
 import Users from "./Users";
 
 class TempOrders extends Model {
@@ -46,14 +46,14 @@ TempOrders.init({
     tableName: 'tempOrders'
 });
 
-Map.hasMany(TempOrders, {
+Branches.hasMany(TempOrders, {
     foreignKey: 'branchId',
     as: 'tempOrders',
     onDelete: 'cascade',
     onUpdate: 'cascade',
 });
 
-TempOrders.belongsTo(Map, {
+TempOrders.belongsTo(Branches, {
     foreignKey: 'branchId',
     as: 'branch',
     onDelete: 'cascade',

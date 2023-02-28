@@ -9,8 +9,8 @@ export default class BasketController {
         try {
             const {userId} = req;
 
-            const basket = await Basket.findAll({
-                where: { userId },
+            let basket = await Basket.findAll({
+                where: {userId},
                 include: [{
                     model: Products,
                     as: 'product',
@@ -18,12 +18,9 @@ export default class BasketController {
                 }]
             });
 
-            basket.totalPrice = +basket.quantity * +basket.product.price;
-            basket.itemPrice = +basket.product.price;
-
             res.json({
                 status: "ok",
-                basket: basket || {},
+                basket: basket || [],
             });
         } catch (e) {
             next(e);
@@ -45,21 +42,21 @@ export default class BasketController {
             }
 
             const product = await Products.findOne({
-                where: { id: productId }
+                where: {id: productId}
             });
 
-            if(_.isEmpty(product)){
+            if (_.isEmpty(product)) {
                 throw HttpError(403, 'Invalid product id.');
             }
 
-            const basket = await Basket.findOne({where: {productId}});
+            const basket = await Basket.findOne({where: {productId, userId}});
 
-            if(!_.isEmpty(basket)){
+            if (!_.isEmpty(basket)) {
                 quantity = +basket.quantity + +quantity;
 
                 const basketItem = Basket.update({
                     quantity
-                }, {where: {id: existBasket.id}})
+                }, {where: {id: basket.id}})
 
                 res.json({
                     status: "ok",
@@ -98,7 +95,7 @@ export default class BasketController {
             }
 
             const basketItem = await Basket.findOne({
-                where: { id },
+                where: {id},
                 include: [{
                     model: Products,
                     as: 'product',
@@ -106,7 +103,7 @@ export default class BasketController {
                 }]
             });
 
-            if(_.isEmpty(basketItem)){
+            if (_.isEmpty(basketItem)) {
                 throw HttpError(403, 'Invalid id.');
             }
 
@@ -135,13 +132,13 @@ export default class BasketController {
                 throw HttpError(422, validate.error);
             }
 
-            const removedItem = await Basket.destroy({
-                where: { id }
+            await Basket.destroy({
+                where: {id}
             })
 
             res.json({
                 status: "ok",
-                removedItem
+                removedItemId: id
             });
         } catch (e) {
             next(e);

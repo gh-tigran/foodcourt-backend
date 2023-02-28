@@ -6,14 +6,14 @@ import HttpError from "http-errors";
 import _ from "lodash";
 import Joi from 'joi';
 import Validator from "../middlewares/Validator";
-``
+
 export default class OffersController {
     static getOffers = async (req, res, next) => {
         try {
             const {title, category} = req.query;
             const where = title ? {
                 type: 'offer',
-                title: { $like: `%${title.trim()}%` }
+                title: {$like: `%${title.trim()}%`}
             } : {type: 'offer'};
 
             const count = await Products.findAll({
@@ -108,7 +108,7 @@ export default class OffersController {
 
             const slugName = await Products.generateSlug(title);
 
-            if(slugName === '-'){
+            if (slugName === '-') {
                 throw HttpError(403, 'Invalid title');
             }
 
@@ -188,7 +188,7 @@ export default class OffersController {
             if (title && title !== offer.title) {
                 slugName = await Products.generateSlug(title);
 
-                if(slugName === '-'){
+                if (slugName === '-') {
                     throw HttpError(403, 'Invalid title');
                 }
             }

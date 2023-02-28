@@ -3,8 +3,8 @@ import Joi from "joi";
 export default class Validator {
     static email = (required) => {
         return required ?
-            Joi.string().regex(/^(\w{8,})@([a-z]{2,})\.([a-z]{2,6})$/i).required()
-            : Joi.string().regex(/^(\w{8,})@([a-z]{2,})\.([a-z]{2,6})$/i);
+            Joi.string().email().required()
+            : Joi.string().email();
     }
     static password = (required) => {
         // return required ?
@@ -70,11 +70,11 @@ export default class Validator {
     static productList = (required) => {
         return required ?
             Joi.array().items(Joi.object({
-                id: Joi.number().min(1).required(),
+                productId: Joi.number().min(1).required(),
                 quantity: Joi.number().min(1).required(),
             })).required()
             : Joi.array().items(Joi.object({
-                id: Joi.number().min(1).required(),
+                productId: Joi.number().min(1).required(),
                 quantity: Joi.number().min(1).required(),
             }));
     }

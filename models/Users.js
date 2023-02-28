@@ -11,6 +11,7 @@ class Users extends Model {
         await Users.update({
             status: 'active',
             confirmToken: null,
+            email
         }, {where: {email, status: 'pending'}});
     };
 }
