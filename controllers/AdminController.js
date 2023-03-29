@@ -6,6 +6,7 @@ import {v4 as uuidV4} from "uuid";
 import Email from "../services/Email";
 import _ from "lodash";
 import Validator from "../middlewares/Validator";
+import {joiErrorMessage} from "../services/JoiConfig";
 
 const {JWT_SECRET} = process.env;
 
@@ -30,8 +31,8 @@ class AdminController {
             const {email, password} = req.body;
 
             const validate = Joi.object({
-                email: Validator.email(true),
-                password: Validator.password(true),
+                email: Validator.email(true).error(new Error(joiErrorMessage.email)),
+                password: Validator.password(true).error(new Error(joiErrorMessage.password)),
             }).validate({email, password});
 
             if (validate.error) {
@@ -41,11 +42,11 @@ class AdminController {
             const admin = await Admin.findOne({where: {email}});
 
             if (_.isEmpty(admin) || admin.getDataValue('password') !== Admin.passwordHash(password)) {
-                throw HttpError(403, 'Invalid login or password');
+                throw HttpError(403, 'Неправильный логин или пароль');
             }
 
             if (admin.status !== 'active') {
-                throw HttpError(403, 'Admin is not active!');
+                throw HttpError(403, 'Админ не активен');
             }
 
             const token = jwt.sign({adminId: admin.id}, JWT_SECRET);
@@ -74,13 +75,13 @@ class AdminController {
             } = req.body;
 
             const validate = Joi.object({
-                firstName: Validator.shortText(true),
-                lastName: Validator.shortText(true),
-                email: Validator.email(true),
-                phoneNum: Validator.phone(true),
-                password: Validator.password(true),
-                confirmPassword: Validator.password(true),
-                role: Validator.role(true),
+                firstName: Validator.shortText(true).error(new Error(joiErrorMessage.firstName)),
+                lastName: Validator.shortText(true).error(new Error(joiErrorMessage.lastName)),
+                email: Validator.email(true).error(new Error(joiErrorMessage.email)),
+                phoneNum: Validator.phone(true).error(new Error(joiErrorMessage.phoneNum)),
+                password: Validator.password(true).error(new Error(joiErrorMessage.password)),
+                confirmPassword: Validator.password(true).error(new Error(joiErrorMessage.confirmPassword)),
+                role: Validator.role(true).error(new Error(joiErrorMessage.role)),
             }).validate({firstName, lastName, email, phoneNum, password, confirmPassword, role});
 
             if (validate.error) {
@@ -88,7 +89,7 @@ class AdminController {
             }
 
             if (confirmPassword !== password) {
-                throw HttpError(403, 'Confirm password is wrong!');
+                throw HttpError(403, 'Неверный пароль для подтверждения');
             }
 
             const admin = await Admin.findOne({where: {email}});
@@ -97,7 +98,7 @@ class AdminController {
                 if (admin.status === "deleted") {
                     await Admin.destroy({where: {id: admin.id}});
                 } else {
-                    throw HttpError(422, 'Admin from this email already registered');
+                    throw HttpError(422, 'Админ с этого адреса уже зарегистрирован');
                 }
             }
 
@@ -105,7 +106,7 @@ class AdminController {
                 const branch = await Map.findOne({where: {id: branchId}});
 
                 if (_.isEmpty(branch)) {
-                    throw HttpError(422, "Can't find branch from this id.");
+                    throw HttpError(422, "Не удается найти ветку с этот id");
                 }
             }
 
@@ -115,7 +116,7 @@ class AdminController {
             try {
                 await Email.sendActivationEmail(email, confirmToken, redirectUrl);
             } catch (e) {
-                throw HttpError(422, 'Error in sending email message');
+                throw HttpError(422, 'Ошибка отправки сообщения электронной почты');
             }
 
             const registeredAdmin = await Admin.create({
@@ -144,8 +145,8 @@ class AdminController {
             const {email, token} = req.query;
 
             const validate = Joi.object({
-                email: Validator.email(true),
-                token: Validator.token(true),
+                email: Validator.email(true).error(new Error(joiErrorMessage.email)),
+                token: Validator.token(true).error(new Error(joiErrorMessage.token)),
             }).validate({email, token});
 
             if (validate.error) {
@@ -183,11 +184,11 @@ class AdminController {
             } = req.body;
 
             const validate = Joi.object({
-                id: Validator.numGreatOne(true),
-                firstName: Validator.shortText(false),
-                lastName: Validator.shortText(false),
-                phoneNum: Validator.phone(false),
-                role: Validator.role(false),
+                id: Validator.numGreatOne(true).error(new Error(joiErrorMessage.id)),
+                firstName: Validator.shortText(false).error(new Error(joiErrorMessage.firstName)),
+                lastName: Validator.shortText(false).error(new Error(joiErrorMessage.lastName)),
+                phoneNum: Validator.phone(false).error(new Error(joiErrorMessage.phoneNum)),
+                role: Validator.role(false).error(new Error(joiErrorMessage.role)),
             }).validate({id, firstName, lastName, phoneNum, role});
 
             if (validate.error) {
@@ -197,10 +198,10 @@ class AdminController {
             const admin = await Admin.findOne({where: {id}});
 
             if (admin.status === 'deleted') {
-                throw HttpError(403, 'Admin deleted.');
+                throw HttpError(403, 'Админ удален');
             }
 
-            if (role === 'admin' || role === 'admin manager') {
+            if (role === 'владелец' || role === 'супер админ') {
                 branchId = null;
             }
 
@@ -208,7 +209,7 @@ class AdminController {
                 const branch = await Map.findOne({where: {id: branchId}});
 
                 if (_.isEmpty(branch)) {
-                    throw HttpError(422, "Can't find branch from this id.");
+                    throw HttpError(422, "Не удается найти ветку с этот id");
                 }
             }
 
@@ -241,7 +242,7 @@ class AdminController {
             const {adminId} = req;
 
             const validate = Joi.object({
-                id: Validator.numGreatOne(true)
+                id: Validator.numGreatOne(true).error(new Error(joiErrorMessage.id))
             }).validate({id});
 
             if (validate.error) {
@@ -272,10 +273,10 @@ class AdminController {
             let status, confirmToken;
 
             const validate = Joi.object({
-                firstName: Validator.shortText(false),
-                lastName: Validator.shortText(false),
-                phoneNum: Validator.phone(false),
-                email: Validator.email(false),
+                firstName: Validator.shortText(false).error(new Error(joiErrorMessage.firstName)),
+                lastName: Validator.shortText(false).error(new Error(joiErrorMessage.lastName)),
+                phoneNum: Validator.phone(false).error(new Error(joiErrorMessage.phoneNum)),
+                email: Validator.email(false).error(new Error(joiErrorMessage.email)),
             }).validate({firstName, lastName, phoneNum, email});
 
             if (validate.error) {
@@ -286,7 +287,7 @@ class AdminController {
                 const admin = await Admin.findOne({where: {email}});
 
                 if (!_.isEmpty(admin)) {
-                    throw HttpError(403, "This email already exist.");
+                    throw HttpError(403, "Этот адрес электронной почты уже существует");
                 }
 
                 confirmToken = uuidV4();
@@ -295,7 +296,7 @@ class AdminController {
                 try {
                     await Email.sendActivationEmail(email, confirmToken, redirectUrl);
                 } catch (e) {
-                    throw HttpError(422, 'Error in sending email message');
+                    throw HttpError(422, 'Ошибка отправки сообщения электронной почты');
                 }
 
                 status = 'pending';
@@ -345,7 +346,7 @@ class AdminController {
             const {id} = req.params;
 
             const validate = Joi.object({
-                id: Validator.numGreatOne(true),
+                id: Validator.numGreatOne(true).error(new Error(joiErrorMessage.id)),
             }).validate({id});
 
             if (validate.error) {
@@ -368,7 +369,7 @@ class AdminController {
             const {email} = req.body;
 
             const validate = Joi.object({
-                email: Validator.email(true),
+                email: Validator.email(true).error(new Error(joiErrorMessage.email)),
             }).validate({email});
 
             if (validate.error) {
@@ -378,11 +379,11 @@ class AdminController {
             const admin = await Admin.findOne({where: {email}});
 
             if (_.isEmpty(admin)) {
-                throw HttpError(403, "Invalid email.");
+                throw HttpError(403, "Неверный адрес электронной почты");
             }
 
             if (admin.status !== 'active') {
-                throw HttpError(403, "Email isn't active.");
+                throw HttpError(403, "Электронная почта не активна");
             }
 
             const confirmToken = uuidV4();
@@ -390,7 +391,7 @@ class AdminController {
             try {
                 await Email.sendPasswordChangeEmail(email, confirmToken);
             } catch (e) {
-                throw HttpError(403, 'Error in sending email message');
+                throw HttpError(403, 'Ошибка отправки сообщения электронной почты');
             }
 
             await Admin.update({
@@ -410,10 +411,10 @@ class AdminController {
             const {email, password, confirmPassword, token} = req.body;
 
             const validate = Joi.object({
-                email: Validator.email(true),
-                password: Validator.password(true),
-                confirmPassword: Validator.password(true),
-                token: Validator.token(true),
+                email: Validator.email(true).error(new Error(joiErrorMessage.email)),
+                password: Validator.password(true).error(new Error(joiErrorMessage.password)),
+                confirmPassword: Validator.password(true).error(new Error(joiErrorMessage.confirmPassword)),
+                token: Validator.token(true).error(new Error(joiErrorMessage.token)),
             }).validate({email, password, confirmPassword, token});
 
             if (validate.error) {
@@ -421,21 +422,21 @@ class AdminController {
             }
 
             if (confirmPassword !== password) {
-                throw HttpError(403, 'Invalid confirm password');
+                throw HttpError(403, 'Неверный пароль для подтверждения');
             }
 
             const admin = await Admin.findOne({where: {email}});
 
             if (_.isEmpty(admin)) {
-                throw HttpError(403, "Email isn't valid");
+                throw HttpError(403, "Неверный адрес электронной почты");
             }
 
             if (admin.status !== 'active') {
-                throw HttpError(403, "Account isn't active");
+                throw HttpError(403, "Аккаунт не активен");
             }
 
             if (admin.confirmToken !== token) {
-                throw HttpError(403, "Invalid token");
+                throw HttpError(403, "Недействительный токен");
             }
 
             const account = await Admin.update({

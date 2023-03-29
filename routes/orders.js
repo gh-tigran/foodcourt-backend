@@ -11,6 +11,8 @@ router.get('/user/not-received', allowCurrent('ordersListUser'), OrdersControlle
 
 router.get('/', allowCurrent('ordersStatistics'), OrdersController.getOrdersStatistics);
 
+///router.post('/card', allowCurrent('orderAdd'), OrdersController.addOrderByCard);
+
 router.put('/:id', allowCurrent('orderModify'), OrdersController.modifyOrder);
 
 router.post('/', allowCurrent('orderAdd'), OrdersController.addOrder);

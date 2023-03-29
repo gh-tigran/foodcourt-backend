@@ -6,6 +6,7 @@ import HttpError from "http-errors";
 import _ from "lodash";
 import Joi from "joi";
 import Validator from "../middlewares/Validator";
+import {joiErrorMessage} from "../services/JoiConfig";
 
 export default class BranchController {
     static getBranches = async (req, res, next) => {
@@ -32,7 +33,7 @@ export default class BranchController {
             const {id} = req.params;
 
             const validate = Joi.object({
-                id: Validator.numGreatOne(true),
+                id: Validator.numGreatOne(true).error(new Error(joiErrorMessage.id)),
             }).validate({id});
 
             if (validate.error) {
@@ -72,13 +73,13 @@ export default class BranchController {
             } = req.body;
 
             const validate = Joi.object({
-                lat: Joi.number().required(),
-                lon: Joi.number().required(),
-                title: Validator.shortText(true),
-                location: Validator.shortText(true),
-                city: Validator.shortText(true),
-                country: Validator.shortText(true),
-                phoneNum: Validator.phone(true),
+                lat: Joi.number().required().error(new Error(joiErrorMessage.coords)),
+                lon: Joi.number().required().error(new Error(joiErrorMessage.coords)),
+                title: Validator.shortText(true).error(new Error(joiErrorMessage.title)),
+                location: Validator.shortText(true).error(new Error(joiErrorMessage.address)),
+                city: Validator.shortText(true).error(new Error(joiErrorMessage.city)),
+                country: Validator.shortText(true).error(new Error(joiErrorMessage.country)),
+                phoneNum: Validator.phone(true).error(new Error(joiErrorMessage.phoneNum)),
             }).validate({lat, lon, title, location, city, country, phoneNum});
 
             if (validate.error) {
@@ -86,19 +87,19 @@ export default class BranchController {
             }
 
             if (_.isEmpty(files)) {
-                throw HttpError(403, "Doesn't sent image.");
+                throw HttpError(403, "Не отправили изображение");
             }
 
             const imageFile = files.find(file => ['image/png', 'image/jpeg'].includes(file.mimetype));
 
             if (_.isEmpty(imageFile)) {
-                throw HttpError(403, "Doesn't sent image.");
+                throw HttpError(403, "Не отправили изображение");
             }
 
             const branchFromSameCoords = await Map.findOne({where: {lat, lon}});
 
             if (!_.isEmpty(branchFromSameCoords)) {
-                throw HttpError(403, "Branch from that coords already exist.");
+                throw HttpError(403, "Ветка с такими координатами уже существует");
             }
 
             const mainBranch = await Map.findOne({
@@ -165,13 +166,13 @@ export default class BranchController {
             let branchFromSameCoords = {};
 
             const validate = Joi.object({
-                lat: Joi.number().required(),
-                lon: Joi.number().required(),
-                title: Validator.shortText(false),
-                location: Validator.shortText(false),
-                city: Validator.shortText(false),
-                country: Validator.shortText(false),
-                phoneNum: Validator.phone(false),
+                lat: Joi.number().required().error(new Error(joiErrorMessage.coords)),
+                lon: Joi.number().required().error(new Error(joiErrorMessage.coords)),
+                title: Validator.shortText(false).error(new Error(joiErrorMessage.title)),
+                location: Validator.shortText(false).error(new Error(joiErrorMessage.description)),
+                city: Validator.shortText(false).error(new Error(joiErrorMessage.city)),
+                country: Validator.shortText(false).error(new Error(joiErrorMessage.country)),
+                phoneNum: Validator.phone(false).error(new Error(joiErrorMessage.phoneNum)),
             }).validate({lat, lon, title, location, city, country, phoneNum});
 
             if (validate.error) {
@@ -185,7 +186,7 @@ export default class BranchController {
             }
 
             if (branchFromSameCoords && +branchFromSameCoords.id !== +id) {
-                throw HttpError(403, "Branch from that coords already exist!!!");
+                throw HttpError(403, "Ветка с такими координатами уже существует");
             }
 
             const branch = await Map.findOne({
@@ -198,7 +199,7 @@ export default class BranchController {
             });
 
             if (_.isEmpty(branch)) {
-                throw HttpError(403, "Not found branch from that id");
+                throw HttpError(403, "Не найдена ветка с этот id");
             }
 
             if(!_.isEmpty(notDeleteImageIdList) || !_.isEmpty(files)){
@@ -276,7 +277,7 @@ export default class BranchController {
             const {id} = req.params;
 
             const validate = Joi.object({
-                id: Validator.numGreatOne(true),
+                id: Validator.numGreatOne(true).error(new Error(joiErrorMessage.id)),
             }).validate({id});
 
             if (validate.error) {
@@ -293,7 +294,7 @@ export default class BranchController {
             });
 
             if (_.isEmpty(branch)) {
-                throw HttpError(403, "Not found branch from that id");
+                throw HttpError(403, "Не найдена ветка с этот id");
             }
 
             const deletedBranch = await Map.destroy({where: {id}});

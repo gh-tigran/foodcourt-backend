@@ -5,7 +5,6 @@ import {
     Products,
     Basket,
     Slides,
-    News,
     Map,
     MapImages,
     ProdCatRel,
@@ -13,6 +12,10 @@ import {
     Orders,
     OrderRel,
     PaymentTypes,
+    Footer,
+    FooterSocial,
+    Comment,
+    About,
 } from "../models";
 
 const {ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME, ADMIN_LAST_NAME, ADMIN_PHONE_NUM} = process.env;
@@ -25,7 +28,6 @@ async function main() {
         Products,
         Basket,
         Slides,
-        News,
         Map,
         MapImages,
         ProdCatRel,
@@ -33,6 +35,10 @@ async function main() {
         Orders,
         OrderRel,
         PaymentTypes,
+        Footer,
+        FooterSocial,
+        Comment,
+        About,
     ]) {
         await Model.sync({alter: true});
     }
@@ -46,7 +52,7 @@ async function main() {
             email: ADMIN_EMAIL,
             password: ADMIN_PASSWORD,
             phoneNum: ADMIN_PHONE_NUM,
-            role: 'admin',
+            role: 'владелец',
             status: 'active',
         });
     }

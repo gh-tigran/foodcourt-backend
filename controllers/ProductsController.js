@@ -6,23 +6,41 @@ import HttpError from "http-errors";
 import _ from "lodash";
 import Joi from "joi";
 import Validator from "../middlewares/Validator";
+import {joiErrorMessage} from "../services/JoiConfig";
 
 export default class ProductsController {
+    static getAllProducts = async (req, res, next) => {
+        try {
+            const products = await Products.findAll({
+                attributes: ['id', 'title']
+            });
+
+            res.json({
+                status: "ok",
+                products,
+            });
+        } catch (e) {
+            next(e);
+        }
+    }
+
     static getProducts = async (req, res, next) => {
         try {
             let {
                 order = 0,
                 page = 1,
-                limit = 10,
+                limit = 12,
                 title,
                 category
             } = req.query;
 
+            console.log(category);
+
             const validate = Joi.object({
-                order: Joi.number().valid(0, 1, 2, 3),
-                page: Validator.numGreatOne(false),
-                limit: Validator.numGreatOne(false),
-                title: Validator.shortText(false),
+                order: Joi.number().valid(0, 1, 2, 3).error(new Error(joiErrorMessage.parameter)),
+                page: Validator.numGreatOne(false).error(new Error(joiErrorMessage.parameter)),
+                limit: Validator.numGreatOne(false).error(new Error(joiErrorMessage.parameter)),
+                title: Validator.shortText(false).error(new Error(joiErrorMessage.parameter)),
             }).validate({order, page, limit, title});
 
             if (validate.error) {
@@ -73,6 +91,8 @@ export default class ProductsController {
                 limit
             });
 
+            console.log(products);
+
             res.json({
                 status: "ok",
                 data: !_.isEmpty(products) ? {
@@ -93,17 +113,17 @@ export default class ProductsController {
             let {
                 order = 0,
                 page = 1,
-                limit = 10,
+                limit = 12,
                 title
             } = req.query;
             const {categorySlug} = req.params;
 
             const validate = Joi.object({
-                order: Joi.number().valid(0, 1, 2, 3),
-                page: Validator.numGreatOne(false),
-                limit: Validator.numGreatOne(false),
-                title: Validator.shortText(false),
-                categorySlug: Validator.shortText(true),
+                order: Joi.number().valid(0, 1, 2, 3).error(new Error(joiErrorMessage.parameter)),
+                page: Validator.numGreatOne(false).error(new Error(joiErrorMessage.parameter)),
+                limit: Validator.numGreatOne(false).error(new Error(joiErrorMessage.parameter)),
+                title: Validator.shortText(false).error(new Error(joiErrorMessage.parameter)),
+                categorySlug: Validator.shortText(true).error(new Error(joiErrorMessage.parameter)),
             }).validate({order, page, limit, title, categorySlug});
 
             if (validate.error) {
@@ -177,7 +197,7 @@ export default class ProductsController {
             const {slugName} = req.params;
 
             const validate = Joi.object({
-                slugName: Validator.shortText(true),
+                slugName: Validator.shortText(true).error(new Error(joiErrorMessage.slugName)),
             }).validate({slugName});
 
             if (validate.error) {
@@ -207,10 +227,10 @@ export default class ProductsController {
             const {title, description, price, categoryId} = req.body;
 
             const validate = Joi.object({
-                title: Validator.shortText(true),
-                description: Validator.longText(true),
-                price: Validator.numGreatOne(true),
-                categoryId: Validator.idArray(true),
+                title: Validator.shortText(true).error(new Error(joiErrorMessage.title)),
+                description: Validator.longText(true).error(new Error(joiErrorMessage.description)),
+                price: Validator.numGreatOne(true).error(new Error(joiErrorMessage.price)),
+                categoryId: Validator.idArray(true).error(new Error(joiErrorMessage.categoryId)),
             }).validate({title, description, price, categoryId});
 
             if (validate.error) {
@@ -218,7 +238,7 @@ export default class ProductsController {
             }
 
             if (_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)) {
-                throw HttpError(422, "Doesn't sent image!");
+                throw HttpError(422, "Не отправил изображение");
             }
 
             const imagePath = path.join('files', uuidV4() + '-' + file.originalname);
@@ -228,7 +248,7 @@ export default class ProductsController {
             const slugName = await Products.generateSlug(title);
 
             if (slugName === '-') {
-                throw HttpError(403, 'Invalid title');
+                throw HttpError(403, 'Недопустимый заголовок');
             }
 
             const createdProduct = await Products.create({
@@ -272,11 +292,11 @@ export default class ProductsController {
             const {title, description, price, categoryId} = req.body;
 
             const validate = Joi.object({
-                id: Validator.numGreatOne(true),
-                title: Validator.shortText(false),
-                description: Validator.longText(false),
-                price: Validator.numGreatOne(false),
-                categoryId: Validator.idArray(false),
+                id: Validator.numGreatOne(true).error(new Error(joiErrorMessage.id)),
+                title: Validator.shortText(false).error(new Error(joiErrorMessage.title)),
+                description: Validator.longText(false).error(new Error(joiErrorMessage.description)),
+                price: Validator.numGreatOne(false).error(new Error(joiErrorMessage.price)),
+                categoryId: Validator.idArray(false).error(new Error(joiErrorMessage.categoryId)),
             }).validate({id, title, description, price, categoryId});
 
             if (validate.error) {
@@ -288,7 +308,7 @@ export default class ProductsController {
             let imagePath = '';
 
             if (_.isEmpty(product)) {
-                throw HttpError(403, "Not found product from that id");
+                throw HttpError(403, "Товар с таким ID не найден");
             }
 
             if (!_.isEmpty(categoryId)) {
@@ -308,7 +328,7 @@ export default class ProductsController {
                 slugName = await Products.generateSlug(title);
 
                 if (slugName === '-') {
-                    throw HttpError(403, 'Invalid title');
+                    throw HttpError(403, 'Недопустимый заголовок');
                 }
             }
 
@@ -347,7 +367,7 @@ export default class ProductsController {
             const {id} = req.params;
 
             const validate = Joi.object({
-                id: Validator.numGreatOne(true),
+                id: Validator.numGreatOne(true).error(new Error(joiErrorMessage.id)),
             }).validate({id});
 
             if (validate.error) {
@@ -357,7 +377,7 @@ export default class ProductsController {
             const product = await Products.findOne({where: {id}});
 
             if (_.isEmpty(product)) {
-                throw HttpError(403, "Not found product from that id.");
+                throw HttpError(403, "Товар с таким ID не найден");
             }
 
             const delImagePath = Products.getImgPath(product.imagePath);

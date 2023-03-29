@@ -27,10 +27,6 @@ Users.init({
         type: DataTypes.STRING(50),
         allowNull: false
     },
-    lastName: {
-        type: DataTypes.STRING(50),
-        allowNull: false
-    },
     email: {
         type: DataTypes.STRING(100),
         unique: 'email',

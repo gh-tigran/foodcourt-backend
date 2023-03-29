@@ -6,6 +6,7 @@ import HttpError from "http-errors";
 import _ from "lodash";
 import Joi from 'joi';
 import Validator from "../middlewares/Validator";
+import {joiErrorMessage} from "../services/JoiConfig";
 
 export default class OffersController {
     static getOffers = async (req, res, next) => {
@@ -58,7 +59,7 @@ export default class OffersController {
             const {slugName} = req.params;
 
             const validate = Joi.object({
-                slugName: Validator.shortText(true),
+                slugName: Validator.shortText(true).error(new Error(joiErrorMessage.slugName)),
             }).validate({slugName});
 
             if (validate.error) {
@@ -88,10 +89,10 @@ export default class OffersController {
             const {title, description, price, categoryId} = req.body;
 
             const validate = Joi.object({
-                title: Validator.shortText(true),
-                description: Validator.longText(true),
-                price: Validator.numGreatOne(true),
-                categoryId: Validator.idArray(true),
+                title: Validator.shortText(true).error(new Error(joiErrorMessage.title)),
+                description: Validator.longText(true).error(new Error(joiErrorMessage.description)),
+                price: Validator.numGreatOne(true).error(new Error(joiErrorMessage.price)),
+                categoryId: Validator.idArray(true).error(new Error(joiErrorMessage.categoryId)),
             }).validate({title, description, price, categoryId});
 
             if (validate.error) {
@@ -99,7 +100,7 @@ export default class OffersController {
             }
 
             if (_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)) {
-                throw HttpError(422, "Doesn't sent image!");
+                throw HttpError(422, "Не отправили изображение");
             }
 
             const imagePath = path.join('files', uuidV4() + '-' + file.originalname);
@@ -109,7 +110,7 @@ export default class OffersController {
             const slugName = await Products.generateSlug(title);
 
             if (slugName === '-') {
-                throw HttpError(403, 'Invalid title');
+                throw HttpError(403, 'Недопустимый заголовок');
             }
 
             const createdOffer = await Products.create({
@@ -153,11 +154,11 @@ export default class OffersController {
             const {title, description, price, categoryId} = req.body;
 
             const validate = Joi.object({
-                id: Validator.numGreatOne(true),
-                title: Validator.shortText(false),
-                description: Validator.longText(false),
-                price: Validator.numGreatOne(false),
-                categoryId: Validator.idArray(false),
+                id: Validator.numGreatOne(true).error(new Error(joiErrorMessage.id)),
+                title: Validator.shortText(false).error(new Error(joiErrorMessage.title)),
+                description: Validator.longText(false).error(new Error(joiErrorMessage.description)),
+                price: Validator.numGreatOne(false).error(new Error(joiErrorMessage.price)),
+                categoryId: Validator.idArray(false).error(new Error(joiErrorMessage.categoryId)),
             }).validate({id, title, description, price, categoryId});
 
             if (validate.error) {
@@ -169,7 +170,7 @@ export default class OffersController {
             let imagePath = '';
 
             if (_.isEmpty(offer)) {
-                throw HttpError(403, "Not found offer from that id");
+                throw HttpError(403, "Не найдено предложение с этот id");
             }
 
             if (!_.isEmpty(categoryId)) {
@@ -189,7 +190,7 @@ export default class OffersController {
                 slugName = await Products.generateSlug(title);
 
                 if (slugName === '-') {
-                    throw HttpError(403, 'Invalid title');
+                    throw HttpError(403, 'Недопустимый заголовок');
                 }
             }
 
@@ -228,7 +229,7 @@ export default class OffersController {
             const {id} = req.params;
 
             const validate = Joi.object({
-                id: Validator.numGreatOne(true),
+                id: Validator.numGreatOne(true).error(new Error(joiErrorMessage.id)),
             }).validate({id});
 
             if (validate.error) {
@@ -238,7 +239,7 @@ export default class OffersController {
             const offer = await Products.findOne({where: {id}});
 
             if (_.isEmpty(offer)) {
-                throw HttpError(403, "Not found offer from that id");
+                throw HttpError(403, "Не найдено предложение с этот id");
             }
 
             const delImagePath = Products.getImgPath(offer.imagePath);

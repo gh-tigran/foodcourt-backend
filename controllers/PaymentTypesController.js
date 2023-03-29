@@ -3,6 +3,7 @@ import Joi from "joi";
 import Validator from "../middlewares/Validator";
 import HttpError from "http-errors";
 import _ from 'lodash';
+import {joiErrorMessage} from "../services/JoiConfig";
 
 export default class CategoriesController {
     static getPaymentTypes = async (req, res, next) => {
@@ -18,7 +19,20 @@ export default class CategoriesController {
         }
     }
 
-    static getSinglePaymentTypes = async (req, res, next) => {
+    static getAllowedPaymentTypes = async (req, res, next) => {
+        try {
+            const paymentTypes = await PaymentTypes.findAll({where: {allowUse: 't'}});
+
+            res.json({
+                status: "ok",
+                paymentTypes
+            });
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    static getSinglePaymentType = async (req, res, next) => {
         const {id} = req.params;
 
         try {
@@ -35,11 +49,11 @@ export default class CategoriesController {
 
     static addPaymentType = async (req, res, next) => {
         try {
-            const {type, typeName} = req.body;
+            const {type, typeName, allowUse} = req.body;
 
             const validate = Joi.object({
-                type: Validator.shortText(true),
-                typeName: Validator.shortText(true),
+                type: Validator.shortText(true).error(new Error(joiErrorMessage.paymentType)),
+                typeName: Validator.shortText(true).error(new Error(joiErrorMessage.paymentTypeName)),
             }).validate({type, typeName});
 
             if (validate.error) {
@@ -56,12 +70,13 @@ export default class CategoriesController {
             });
 
             if(!_.isEmpty(paymentType)){
-                throw HttpError(403, 'This payment type already exist.');
+                throw HttpError(403, 'Этот тип платежа уже существует');
             }
 
             const addedPaymentType = await PaymentTypes.create({
                 type,
-                typeName
+                typeName,
+                allowUse: allowUse ? 't' : 'f',
             })
 
             res.json({
@@ -76,12 +91,12 @@ export default class CategoriesController {
     static updatePaymentType = async (req, res, next) => {
         try {
             const {id} = req.params;
-            const {type, typeName} = req.body;
+            const {type, typeName, allowUse} = req.body;
 
             const validate = Joi.object({
-                id: Validator.numGreatOne(true),
-                type: Validator.shortText(false),
-                typeName: Validator.shortText(false),
+                id: Validator.numGreatOne(true).error(new Error(joiErrorMessage.id)),
+                type: Validator.shortText(false).error(new Error(joiErrorMessage.paymentType)),
+                typeName: Validator.shortText(false).error(new Error(joiErrorMessage.paymentTypeName)),
             }).validate({id, type, typeName});
 
             if (validate.error) {
@@ -93,7 +108,7 @@ export default class CategoriesController {
             });
 
             if(_.isEmpty(paymentType)){
-                throw HttpError(403, "Don't find payment type from this id.");
+                throw HttpError(403, "Не нашел тип оплаты");
             }
 
             const paymentTypeBySameValue = await PaymentTypes.findOne({
@@ -106,12 +121,13 @@ export default class CategoriesController {
             });
 
             if(!_.isEmpty(paymentTypeBySameValue) && paymentTypeBySameValue.id !== paymentType.id){
-                throw HttpError(403, 'This payment type already exist.');
+                throw HttpError(403, 'Этот тип платежа уже существует');
             }
 
             const updatedPaymentType = await PaymentTypes.update({
                 type,
-                typeName
+                typeName,
+                allowUse: allowUse ? 't' : 'f',
             }, {where: {id}});
 
             res.json({
@@ -128,7 +144,7 @@ export default class CategoriesController {
             const {id} = req.params;
 
             const validate = Joi.object({
-                id: Validator.numGreatOne(true),
+                id: Validator.numGreatOne(true).error(new Error(joiErrorMessage.id)),
             }).validate({id});
 
             if (validate.error) {
@@ -140,7 +156,7 @@ export default class CategoriesController {
             });
 
             if(_.isEmpty(paymentType)){
-                throw HttpError(403, "Don't find payment type from this id.");
+                throw HttpError(403, "Не нашел тип оплаты");
             }
 
             const deletedPaymentType = await PaymentTypes.destroy(
@@ -150,6 +166,31 @@ export default class CategoriesController {
             res.json({
                 status: "ok",
                 deletedPaymentType
+            });
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    static allowPay = async (req, res, next) => {
+        try {
+            const {allow} = req.body;
+
+            const paymentTypes = await PaymentTypes.findAll();
+
+            if(_.isEmpty(paymentTypes)){
+                throw HttpError(403, "Не нашел тип оплаты");
+            }
+
+            await PaymentTypes.update({
+                allowUse: allow ? 't' : 'f',
+            }, {where: {}});
+
+            const payments = await PaymentTypes.findAll();
+
+            res.json({
+                status: "ok",
+                payments,
             });
         } catch (e) {
             next(e);

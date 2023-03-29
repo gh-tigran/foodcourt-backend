@@ -1,16 +1,21 @@
 import express from "express";
 import PaymentTypesController from "../controllers/PaymentTypesController";
+import allowCurrent from "../middlewares/allowCurrent";
 
 const router = express.Router();
 
-router.get('/', PaymentTypesController.getPaymentTypes);
+router.get('/', allowCurrent('getPaymentTypes'), PaymentTypesController.getPaymentTypes);
 
-router.get('/:id', PaymentTypesController.getSinglePaymentTypes);
+router.get('/allowed', PaymentTypesController.getAllowedPaymentTypes);
 
-router.post('/', PaymentTypesController.addPaymentType);
+router.get('/:id', allowCurrent('getSinglePaymentType'), PaymentTypesController.getSinglePaymentType);
 
-router.put('/:id', PaymentTypesController.updatePaymentType);
+router.post('/', allowCurrent('addPaymentType'), PaymentTypesController.addPaymentType);
 
-router.delete('/:id', PaymentTypesController.deletePaymentType);
+router.put('/allow-pay', allowCurrent('allowPay'), PaymentTypesController.allowPay);
+
+router.put('/:id', allowCurrent('updatePaymentType'), PaymentTypesController.updatePaymentType);
+
+router.delete('/:id', allowCurrent('deletePaymentType'), PaymentTypesController.deletePaymentType);
 
 export default router;

@@ -32,4 +32,8 @@ router.get('/', allowCurrent('usersList'), UserController.list);
 router.get('/:id', allowCurrent('userSingle'), UserController.single);
 
 router.post('/:id', allowCurrent('userChangeStatus'), UserController.changeAccountStatus);
+
+router.put('/change-email-step-1', allowCurrent('userChangeEmail'), UserController.changeEmailStep1);
+
+router.put('/change-email-step-2', allowCurrent('userChangeEmail'), UserController.changeEmailStep2);
 export default router;

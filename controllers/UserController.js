@@ -6,6 +6,7 @@ import { v4 as uuidV4 } from "uuid";
 import Email from "../services/Email";
 import _ from "lodash";
 import Validator from "../middlewares/Validator";
+import {joiErrorMessage} from "../services/JoiConfig";
 
 const {JWT_SECRET} = process.env;
 const seqU = Users.sequelize;
@@ -15,7 +16,6 @@ class UserController {
         try {
             const {
                 firstName,
-                lastName,
                 email,
                 phoneNum,
                 password,
@@ -23,20 +23,19 @@ class UserController {
             } = req.body;
 
             const validate = Joi.object({
-                firstName: Validator.shortText(true),
-                lastName: Validator.shortText(true),
-                email: Validator.email(true),
-                phoneNum: Validator.phone(true),
-                password: Validator.password(true),
-                confirmPassword: Validator.password(true),
-            }).validate({firstName, lastName, email, phoneNum, password, confirmPassword});
+                firstName: Validator.shortText(true).error(new Error(joiErrorMessage.firstName)),
+                email: Validator.email(true).error(new Error(joiErrorMessage.email)),
+                phoneNum: Validator.phone(true).error(new Error(joiErrorMessage.phoneNum)),
+                password: Validator.password(true).error(new Error(joiErrorMessage.password)),
+                confirmPassword: Validator.password(true).error(new Error(joiErrorMessage.confirmPassword)),
+            }).validate({firstName, email, phoneNum, password, confirmPassword});
 
             if (validate.error) {
                 throw HttpError(422, validate.error);
             }
 
             if (confirmPassword !== password) {
-                throw HttpError(403, 'Confirm password is wrong!');
+                throw HttpError(403, 'Неверный пароль для подтверждения');
             }
 
             const user = await Users.findOne({ where: {email} });
@@ -45,7 +44,7 @@ class UserController {
                 if(user.status === "deleted"){
                     await Users.destroy({where: {id: user.id}});
                 }else{
-                    throw HttpError(403, 'User from this email already registered');
+                    throw HttpError(403, 'Пользователь с этого адреса электронной почты уже зарегистрирован');
                 }
             }
 
@@ -55,12 +54,11 @@ class UserController {
             try {
                 await Email.sendActivationEmail(email, confirmToken, redirectUrl);
             }catch (e){
-                throw HttpError(403, 'Error in sending email message');
+                throw HttpError(403, 'Ошибка отправки сообщения электронной почты');
             }
 
             const registeredUser = await Users.create({
                 firstName,
-                lastName,
                 email,
                 password,
                 phoneNum,
@@ -82,8 +80,8 @@ class UserController {
             const {email, password} = req.body;
 
             const validate = Joi.object({
-                email: Validator.email(true),
-                password: Validator.password(true),
+                email: Validator.email(true).error(new Error(joiErrorMessage.email)),
+                password: Validator.password(true).error(new Error(joiErrorMessage.password)),
             }).validate({email, password});
 
             if (validate.error) {
@@ -93,11 +91,11 @@ class UserController {
             const user = await Users.findOne({ where: {email} });
 
             if (_.isEmpty(user) || user.getDataValue('password') !== Users.passwordHash(password)) {
-                throw HttpError(403, 'Invalid email or password');
+                throw HttpError(403, 'Неправильный адрес электронной почты или пароль');
             }
 
             if(user.status !== 'active'){
-                throw HttpError(403, 'User is not active');
+                throw HttpError(403, 'Пользователь не активен');
             }
 
             const token = jwt.sign({userId: user.id}, JWT_SECRET);
@@ -117,8 +115,8 @@ class UserController {
             const { email, token } = req.query;
 
             const validate = Joi.object({
-                email: Validator.email(true),
-                token: Validator.token(true),
+                email: Validator.email(true).error(new Error(joiErrorMessage.email)),
+                token: Validator.token(true).error(new Error(joiErrorMessage.token)),
             }).validate({email, token});
 
             if (validate.error) {
@@ -149,9 +147,9 @@ class UserController {
             let {page = 1, limit = 10, name} = req.query;
 
             const validate = Joi.object({
-                page: Validator.numGreatOne(true),
-                limit: Validator.numGreatOne(true),
-                name: Validator.shortText(false),
+                page: Validator.numGreatOne(true).error(new Error(joiErrorMessage.parameter)),
+                limit: Validator.numGreatOne(true).error(new Error(joiErrorMessage.parameter)),
+                name: Validator.shortText(false).error(new Error(joiErrorMessage.parameter)),
             }).validate({page, limit, name});
 
             if (validate.error) {
@@ -204,7 +202,7 @@ class UserController {
             const {id} = req.params;
 
             const validate = Joi.object({
-                id:  Validator.numGreatOne(true),
+                id:  Validator.numGreatOne(true).error(new Error(joiErrorMessage.id)),
             }).validate({id});
 
             if (validate.error) {
@@ -239,47 +237,21 @@ class UserController {
 
     static modifyCurrentAccount = async (req, res, next) => {
         try {
-            const {firstName, lastName, phoneNum, email} = req.body;
+            const {firstName, phoneNum} = req.body;
             const {userId} = req;
-            let status, confirmToken;
 
             const validate = Joi.object({
-                firstName:  Validator.shortText(false),
-                lastName: Validator.shortText(false),
-                phoneNum: Validator.phone(false),
-                email: Validator.email(false),
-            }).validate({firstName, lastName, phoneNum, email});
+                firstName:  Validator.shortText(false).error(new Error(joiErrorMessage.firstName)),
+                phoneNum: Validator.phone(false).error(new Error(joiErrorMessage.phoneNum)),
+            }).validate({firstName, phoneNum});
 
             if (validate.error) {
                 throw HttpError(422, validate.error);
             }
 
-            if (email) {
-                const user = await Users.findOne({where: {email}});
-
-                if (!_.isEmpty(user)) {
-                    throw HttpError(403, "This email already exist.");
-                }
-
-                confirmToken = uuidV4();
-                const redirectUrl = 'http://localhost:3000/users/confirm';
-
-                try {
-                    await Email.sendActivationEmail(email, confirmToken, redirectUrl);
-                } catch (e) {
-                    throw HttpError(422, 'Error in sending email message');
-                }
-
-                status = 'pending';
-            }
-
             await Users.update({
                 firstName,
-                lastName,
                 phoneNum,
-                email,
-                status,
-                confirmToken
             }, {where: {id: userId},});
 
             const updatedAccount = await Users.findOne({where: {id: userId}})
@@ -316,8 +288,8 @@ class UserController {
             const {status} = req.body;
 
             const validate = Joi.object({
-                id: Validator.numGreatOne(true),
-                status: Joi.string().valid('blocked', 'active').required(),
+                id: Validator.numGreatOne(true).error(new Error(joiErrorMessage.id)),
+                status: Joi.string().valid('blocked', 'active').required().error(new Error(joiErrorMessage.status)),
             }).validate({id, status});
 
             if (validate.error) {
@@ -341,21 +313,21 @@ class UserController {
             const {email} = req.body;
 
             const validate = Joi.object({
-                email: Validator.email(true),
+                email: Validator.email(true).error(new Error(joiErrorMessage.email)),
             }).validate({email});
 
             if (validate.error) {
                 throw HttpError(422, validate.error);
             }
 
-            const admin = await Users.findOne({where: {email}});
+            const user = await Users.findOne({where: {email}});
 
-            if(_.isEmpty(admin)){
-                throw HttpError(403, "Email isn't valid");
+            if(_.isEmpty(user)){
+                throw HttpError(403, "Неверный адрес электронной почты");
             }
 
-            if(admin.confirmToken && admin.status === 'pending'){
-                throw HttpError(403, "Email isn't active.");
+            if(user.confirmToken && user.status === 'pending'){
+                throw HttpError(403, "Электронная почта не активна");
             }
 
             const confirmToken = uuidV4();
@@ -363,12 +335,12 @@ class UserController {
             try {
                 await Email.sendPasswordChangeEmail(email, confirmToken);
             }catch (e){
-                throw HttpError(403, 'Error in sending email message');
+                throw HttpError(403, 'Ошибка отправки сообщения электронной почты');
             }
 
             await Users.update({
                 confirmToken,
-            }, {where: {id: admin.id},});
+            }, {where: {id: user.id},});
 
             res.json({
                 status: 'ok',
@@ -383,10 +355,10 @@ class UserController {
             const {email, password, confirmPassword, token} = req.body;
 
             const validate = Joi.object({
-                email: Validator.email(true),
-                password: Validator.password(true),
-                confirmPassword: Validator.password(true),
-                token: Validator.token(true),
+                email: Validator.email(true).error(new Error(joiErrorMessage.email)),
+                password: Validator.password(true).error(new Error(joiErrorMessage.password)),
+                confirmPassword: Validator.password(true).error(new Error(joiErrorMessage.confirmPassword)),
+                token: Validator.token(true).error(new Error(joiErrorMessage.token)),
             }).validate({email, password, confirmPassword, token});
 
             if (validate.error) {
@@ -394,31 +366,107 @@ class UserController {
             }
 
             if(confirmPassword !== password){
-                throw HttpError(403, "Invalid confirm password");
+                throw HttpError(403, "Неверный пароль для подтверждения");
             }
 
-            const admin = await Users.findOne({where: {email}});
+            const user = await Users.findOne({where: {email}});
 
-            if(_.isEmpty(admin)){
-                throw HttpError(403, "Email isn't valid");
+            if(_.isEmpty(user)){
+                throw HttpError(403, "Неверный адрес электронной почты");
             }
 
-            if(admin.status !== 'active'){
-                throw HttpError(403, "Account isn't active");
+            if(user.status !== 'active'){
+                throw HttpError(403, "Электронная почта не активна");
             }
 
-            if(admin.confirmToken !== token){
-                throw HttpError(403, "Invalid token");
+            if(user.confirmToken !== token){
+                throw HttpError(403, "Неправильный ключ");
             }
 
             const updatedAccount = await Users.update({
                 confirmToken: null,
                 password,
-            }, {where: {id: admin.id},});
+            }, {where: {id: user.id},});
 
             res.json({
                 status: 'ok',
                 user: updatedAccount,
+            });
+        } catch (e) {
+            next(e)
+        }
+    }
+
+    static changeEmailStep1 = async (req, res, next) => {
+        try {
+            const {email} = req.body;
+            const {userId} = req;
+
+            const validate = Joi.object({
+                email: Validator.email(true).error(new Error(joiErrorMessage.email)),
+            }).validate({email});
+
+            if (validate.error) {
+                throw HttpError(422, validate.error);
+            }
+
+            const user = await Users.findOne({where: {email}});
+
+            if (!_.isEmpty(user)) {
+                throw HttpError(403, "Пользователь с этого адреса электронной почты уже зарегистрирован");
+            }
+
+            const confirmToken = uuidV4();
+
+            try {
+                await Email.sendPasswordChangeEmail(email, confirmToken);
+            } catch (e) {
+                throw HttpError(422, 'Ошибка отправки сообщения электронной почты');
+            }
+
+            await Users.update({
+                confirmToken
+            }, {where: {id: userId},});
+
+            res.json({
+                status: 'ok',
+            });
+        } catch (e) {
+            next(e)
+        }
+    }
+
+    static changeEmailStep2 = async (req, res, next) => {
+        try {
+            const {email, token} = req.body;
+            const {userId} = req;
+
+            const validate = Joi.object({
+                email: Validator.email(true).error(new Error(joiErrorMessage.email)),
+                token: Validator.token(true).error(new Error(joiErrorMessage.token)),
+            }).validate({email, token});
+
+            if (validate.error) {
+                throw HttpError(422, validate.error);
+            }
+
+            const user = await Users.findOne({where: {id: userId}});
+
+            if(user.status !== 'active'){
+                throw HttpError(403, "Электронная почта не активна");
+            }
+
+            if(user.confirmToken !== token){
+                throw HttpError(403, "Неправильный ключ");
+            }
+
+            await Users.update({
+                confirmToken: null,
+                email,
+            }, {where: {id: userId},});
+
+            res.json({
+                status: 'ok',
             });
         } catch (e) {
             next(e)

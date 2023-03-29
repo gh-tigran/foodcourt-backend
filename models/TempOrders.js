@@ -22,15 +22,10 @@ TempOrders.init({
         type: DataTypes.BIGINT.UNSIGNED,
         allowNull: false
     },
-    receiveType: {
-        type: DataTypes.ENUM('cashOnDelivery', 'cardOnDelivery', 'onBranch', 'cardOnBranch'),
-        allowNull: false,
-        defaultValue: 'onBranch',
-    },
     status: {
-        type: DataTypes.ENUM('pending', 'inProcess', 'ready', 'onTheWay', 'received'),
+        type: DataTypes.ENUM('в ожидании', 'в процессе', 'готовый', 'в пути', 'полученный'),
         allowNull: false,
-        defaultValue: 'pending',
+        defaultValue: 'в ожидании',
     },
     address: {
         type: DataTypes.STRING(100),

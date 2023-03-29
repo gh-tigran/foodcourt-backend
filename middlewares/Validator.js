@@ -19,8 +19,8 @@ export default class Validator {
     }
     static role = (required) => {
         return required ?
-            Joi.string().valid('admin', 'admin manager', 'manager').required()
-            : Joi.string().valid('admin', 'admin manager', 'manager');
+            Joi.string().valid('владелец', 'супер админ', 'админ').required()
+            : Joi.string().valid('владелец', 'супер админ', 'админ');
     }
     static token = (required) => {
         return required ?

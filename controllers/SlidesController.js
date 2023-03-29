@@ -6,6 +6,7 @@ import HttpError from "http-errors";
 import _ from "lodash";
 import Joi from "joi";
 import Validator from "../middlewares/Validator";
+import {joiErrorMessage} from "../services/JoiConfig";
 
 export default class SlidesController {
     static getSlides = async (req, res, next) => {
@@ -26,7 +27,7 @@ export default class SlidesController {
             const {id} = req.params;
 
             const validate = Joi.object({
-                id: Validator.numGreatOne(true),
+                id: Validator.numGreatOne(true).error(new Error(joiErrorMessage.id)),
             }).validate({id});
 
             if (validate.error) {
@@ -52,8 +53,8 @@ export default class SlidesController {
             const {title, description} = req.body;
 
             const validate = Joi.object({
-                title: Validator.shortText(false),
-                description: Validator.longText(false),
+                title: Validator.shortText(false).error(new Error(joiErrorMessage.title)),
+                description: Validator.longText(false).error(new Error(joiErrorMessage.description)),
             }).validate({title, description});
 
             if (validate.error) {
@@ -61,7 +62,7 @@ export default class SlidesController {
             }
 
             if (_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)) {
-                throw HttpError(422, "Doesn't sent image!");
+                throw HttpError(422, "Не отправил изображение");
             }
 
             const imagePath = path.join('files', uuidV4() + '-' + file.originalname);
@@ -93,9 +94,9 @@ export default class SlidesController {
             const {title, description} = req.body;
 
             const validate = Joi.object({
-                id: Validator.numGreatOne(true),
-                title: Validator.shortText(false),
-                description: Validator.longText(false),
+                id: Validator.numGreatOne(true).error(new Error(joiErrorMessage.id)),
+                title: Validator.shortText(false).error(new Error(joiErrorMessage.title)),
+                description: Validator.longText(false).error(new Error(joiErrorMessage.description)),
             }).validate({id, title, description});
 
             if (validate.error) {
@@ -106,7 +107,7 @@ export default class SlidesController {
             let imagePath = '';
 
             if (_.isEmpty(slide)) {
-                throw HttpError(403, "Not found slide from that id!");
+                throw HttpError(403, "Слайд с таким ID не найден");
             }
 
             if (!_.isEmpty(file) && ['image/png', 'image/jpeg'].includes(file.mimetype)) {
@@ -141,7 +142,7 @@ export default class SlidesController {
             const {id} = req.params;
 
             const validate = Joi.object({
-                id: Validator.numGreatOne(true),
+                id: Validator.numGreatOne(true).error(new Error(joiErrorMessage.id)),
             }).validate({id});
 
             if (validate.error) {
@@ -151,7 +152,7 @@ export default class SlidesController {
             const slide = await Slides.findOne({where: {id}});
 
             if (_.isEmpty(slide)) {
-                throw HttpError(403, "Not found slide from that id!");
+                throw HttpError(403, "Слайд с таким ID не найден");
             }
 
             const delImagePath = Slides.getImgPath(slide.imagePath);

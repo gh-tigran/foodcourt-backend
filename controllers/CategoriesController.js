@@ -6,6 +6,7 @@ import HttpError from "http-errors";
 import _ from "lodash";
 import Joi from "joi";
 import Validator from "../middlewares/Validator";
+import {joiErrorMessage} from "../services/JoiConfig";
 
 export default class CategoriesController {
     static getCategories = async (req, res, next) => {
@@ -31,7 +32,7 @@ export default class CategoriesController {
             const {slugName} = req.params;
 
             const validate = Joi.object({
-                slugName: Validator.shortText(true),
+                slugName: Validator.shortText(true).error(new Error(joiErrorMessage.slugName)),
             }).validate({slugName});
 
             if (validate.error) {
@@ -55,7 +56,7 @@ export default class CategoriesController {
             let {name} = req.body;
 
             const validate = Joi.object({
-                name: Validator.shortText(true),
+                name: Validator.shortText(true).error(new Error(joiErrorMessage.title)),
             }).validate({name});
 
             if (validate.error) {
@@ -63,14 +64,14 @@ export default class CategoriesController {
             }
 
             if (_.isEmpty(file) || !['image/png', 'image/jpeg'].includes(file.mimetype)) {
-                throw HttpError(422, "Doesn't sent Image!");
+                throw HttpError(422, "Изображение не отправлено");
             }
 
             const imagePath = path.join('files', uuidV4() + '-' + file.originalname);
             const slugName = await Categories.generateSlug(name);
 
             if(slugName === '-'){
-                throw HttpError(403, 'Invalid name.');
+                throw HttpError(403, 'Недопустимый заголовок');
             }
 
             fs.renameSync(file.path, Categories.getImgPath(imagePath));
@@ -100,8 +101,8 @@ export default class CategoriesController {
             let {name} = req.body;
 
             const validate = Joi.object({
-                id: Validator.numGreatOne(true),
-                name: Validator.shortText(false),
+                id: Validator.numGreatOne(true).error(new Error(joiErrorMessage.id)),
+                name: Validator.shortText(false).error(new Error(joiErrorMessage.title)),
             }).validate({id, name});
 
             if (validate.error) {
@@ -111,7 +112,7 @@ export default class CategoriesController {
             const category = await Categories.findOne({where: {id}});
 
             if (_.isEmpty(category)) {
-                throw HttpError(403, "Not found category from that id.");
+                throw HttpError(403, "Не найдена категория с этот id");
             }
 
             let updateImagePath = Categories.getImgPath(category.imagePath);
@@ -129,7 +130,7 @@ export default class CategoriesController {
                 slugName = await Categories.generateSlug(name);
 
                 if(slugName === '-'){
-                    throw HttpError(403, 'Invalid name.');
+                    throw HttpError(403, 'Недопустимый заголовок');
                 }
             }
 
@@ -156,7 +157,7 @@ export default class CategoriesController {
             const {id} = req.params;
 
             const validate = Joi.object({
-                id: Validator.numGreatOne(true),
+                id: Validator.numGreatOne(true).error(new Error(joiErrorMessage.id)),
             }).validate({id});
 
             if (validate.error) {
@@ -166,7 +167,7 @@ export default class CategoriesController {
             const category = await Categories.findOne({where: {id}});
 
             if (_.isEmpty(category)) {
-                throw HttpError(403, "Not found category from that id");
+                throw HttpError(403, "Не найдена категория с этот id");
             }
 
             const delImgPath = Categories.getImgPath(category.imagePath);

@@ -24,7 +24,10 @@ const EXCLUDE = [
     '/news/get',
     '/map/get',
 
-    '/payment/public-key'
+    '/footer/get',
+    '/about/get',
+    '/comment/available',
+    '/payment-types/allowed',
 ];
 
 export default async function authorization(req, res, next) {

@@ -1,30 +1,104 @@
 import HttpError from "http-errors";
 
-const notAllowAdmin = [
-    'paymentSetupIntent', 'paymentCreateCard', 'paymentAttach', 'paymentCharge', 'paymentCardList', 'paymentCardSingle', 'paymentDeleteCard', 'paymentDeleteCustomer',
-    'getBasket', 'addToBasket', 'updateBasketItem', 'removeFromBasket',
-    'userCurrent', 'userModifyCurrent', 'userDeleteCurrent',
-    'orderAdd', 'ordersListUser',
+const notAllowOwner = [
+    'paymentSetupIntent',
+    'paymentCreateCard',
+    'paymentAttach',
+    'paymentCharge',
+    'paymentCardList',
+    'paymentCardSingle',
+    'paymentDeleteCard',
+    'paymentDeleteCustomer',
+
+    'getBasket',
+    'addToBasket',
+    'updateBasketItem',
+    'removeFromBasket',
+
+    'userCurrent',
+    'userModifyCurrent',
+    'userDeleteCurrent',
+
+    'orderAdd',
+    'ordersListUser',
 ];
 
-const notAllowAdminManager = [
-    'paymentSetupIntent', 'paymentCreateCard', 'paymentAttach', 'paymentCharge', 'paymentCardList', 'paymentCardSingle', 'paymentDeleteCard', 'paymentDeleteCustomer',
-    'userCurrent', 'userDeleteCurrent', 'userModifyCurrent', 'userChangeStatus', 'userSingle', 'usersList',
-    'adminRegister', 'adminsList', 'adminSingle', 'adminDelete', 'adminModify',
-    'getBasket', 'addToBasket', 'updateBasketItem', 'removeFromBasket',
-    'orderAdd', 'ordersListUser',
+const notAllowSuperAdmin = [
+    'paymentSetupIntent',
+    'paymentCreateCard',
+    'paymentAttach',
+    'paymentCharge',
+    'paymentCardList',
+    'paymentCardSingle',
+    'paymentDeleteCard',
+    'paymentDeleteCustomer',
+
+    'userCurrent',
+    'userDeleteCurrent',
+    'userModifyCurrent',
+    'userChangeStatus',
+    'userSingle',
+    'usersList',
+
+    'adminRegister',
+    'adminsList',
+    'adminSingle',
+    'adminDelete',
+    'adminModify',
+
+    'getBasket',
+    'addToBasket',
+    'updateBasketItem',
+    'removeFromBasket',
+
+    'orderAdd',
+    'ordersListUser',
+
+    'getPaymentTypes',
+    'getAllowedPaymentTypes',
+    'getSinglePaymentType',
+    'addPaymentType',
+    'updatePaymentType',
+    'deletePaymentType',
+    'allowPay',
 ];
 
-const allowManager = [
-    'adminGetCurrent', 'adminModifyCurrent', 'adminDeleteCurrent',
-    'ordersList', 'ordersStatistics', 'orderModify', 'singleOrder',
+const allowAdmin = [
+    'adminGetCurrent',
+    'adminModifyCurrent',
+    'adminDeleteCurrent',
+
+    'ordersList',
+    'ordersStatistics',
+    'orderModify',
+    'singleOrder',
 ];
 
 const allowUser = [
-    'paymentSetupIntent', 'paymentCreateCard', 'paymentAttach', 'paymentCharge', 'paymentCardList', 'paymentCardSingle', 'paymentDeleteCard', 'paymentDeleteCustomer',
-    'getBasket', 'addToBasket', 'updateBasketItem', 'removeFromBasket',
-    'userCurrent', 'userModifyCurrent', 'userDeleteCurrent',
-    'orderAdd', 'ordersListUser',
+    'paymentSetupIntent',
+    'paymentCreateCard',
+    'paymentAttach',
+    'paymentCharge',
+    'paymentCardList',
+    'paymentCardSingle',
+    'paymentDeleteCard',
+    'paymentDeleteCustomer',
+
+    'getBasket',
+    'addToBasket',
+    'updateBasketItem',
+    'removeFromBasket',
+
+    'userCurrent',
+    'userModifyCurrent',
+    'userDeleteCurrent',
+
+    'orderAdd',
+    'ordersListUser',
+
+    'getAllowedPaymentTypes',
+
+    'userChangeEmail',
 ];
 
 const allowCurrent = (permission) => async (req, res, next)=> {
@@ -32,18 +106,18 @@ const allowCurrent = (permission) => async (req, res, next)=> {
         const {userId, adminId, adminRole} = req;
 
         if(adminId
-            && adminRole === 'admin'
-            && !notAllowAdmin.includes(permission)){
+            && adminRole === 'владелец'
+            && !notAllowOwner.includes(permission)){
             next();
             return;
         }else if(adminId
-            && adminRole === 'admin manager'
-            && !notAllowAdminManager.includes(permission)){
+            && adminRole === 'супер админ'
+            && !notAllowSuperAdmin.includes(permission)){
             next();
             return;
         }else if(adminId
-            && adminRole === 'manager'
-            && allowManager.includes(permission)){
+            && adminRole === 'админ'
+            && allowAdmin.includes(permission)){
             next();
             return;
         }

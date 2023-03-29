@@ -3,6 +3,7 @@ import HttpError from "http-errors";
 import _ from "lodash";
 import Joi from "joi";
 import Validator from "../middlewares/Validator";
+import {joiErrorMessage} from "../services/JoiConfig";
 
 export default class BasketController {
     static getBasket = async (req, res, next) => {
@@ -33,8 +34,8 @@ export default class BasketController {
             const {userId} = req;
 
             const validate = Joi.object({
-                productId: Validator.numGreatOne(true),
-                quantity: Validator.numGreatOne(true),
+                productId: Validator.numGreatOne(true).error(new Error(joiErrorMessage.productId)),
+                quantity: Validator.numGreatOne(true).error(new Error(joiErrorMessage.quantity)),
             }).validate({productId, quantity});
 
             if (validate.error) {
@@ -46,7 +47,7 @@ export default class BasketController {
             });
 
             if (_.isEmpty(product)) {
-                throw HttpError(403, 'Invalid product id.');
+                throw HttpError(403, 'Недопустимый ID продукта');
             }
 
             const basket = await Basket.findOne({where: {productId, userId}});
@@ -86,8 +87,8 @@ export default class BasketController {
             const {id} = req.params;
 
             const validate = Joi.object({
-                id: Validator.numGreatOne(true),
-                quantity: Validator.numGreatOne(true),
+                id: Validator.numGreatOne(true).error(new Error(joiErrorMessage.id)),
+                quantity: Validator.numGreatOne(true).error(new Error(joiErrorMessage.quantity)),
             }).validate({id, quantity});
 
             if (validate.error) {
@@ -104,7 +105,7 @@ export default class BasketController {
             });
 
             if (_.isEmpty(basketItem)) {
-                throw HttpError(403, 'Invalid id.');
+                throw HttpError(403, 'Недопустимый id');
             }
 
             const updatedItem = Basket.update({
@@ -125,7 +126,7 @@ export default class BasketController {
             const {id} = req.params;
 
             const validate = Joi.object({
-                id: Validator.numGreatOne(true),
+                id: Validator.numGreatOne(true).error(new Error(joiErrorMessage.id)),
             }).validate({id});
 
             if (validate.error) {

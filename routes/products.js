@@ -6,6 +6,8 @@ import allowCurrent from "../middlewares/allowCurrent";
 const router = express.Router();
 router.get('/get/', ProductsController.getProducts);
 
+router.get('/get/all', ProductsController.getAllProducts);
+
 router.get('/get/category/:categorySlug', ProductsController.getProductsByCategory);
 
 router.get('/get/:slugName', ProductsController.getSingleProduct);

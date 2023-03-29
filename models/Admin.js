@@ -57,9 +57,9 @@ Admin.init({
         defaultValue: 'pending'
     },
     role: {
-        type: DataTypes.ENUM('admin', 'admin manager', 'manager'),
+        type: DataTypes.ENUM('владелец', 'супер админ', 'админ'),
         allowNull: false,
-        defaultValue: 'manager'
+        defaultValue: 'админ',
     },
     confirmToken: {
         type: DataTypes.STRING(100),
