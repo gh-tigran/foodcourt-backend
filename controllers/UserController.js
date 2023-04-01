@@ -41,7 +41,7 @@ class UserController {
             const user = await Users.findOne({ where: {email} });
 
             if (user) {
-                if(user.status === "deleted"){
+                if(user.status === "удален"){
                     await Users.destroy({where: {id: user.id}});
                 }else{
                     throw HttpError(403, 'Пользователь с этого адреса электронной почты уже зарегистрирован');
@@ -63,7 +63,7 @@ class UserController {
                 password,
                 phoneNum,
                 confirmToken,
-                status: 'pending',
+                status: 'в ожидании',
             });
 
             res.json({
@@ -94,7 +94,7 @@ class UserController {
                 throw HttpError(403, 'Неправильный адрес электронной почты или пароль');
             }
 
-            if(user.status !== 'active'){
+            if(user.status !== 'активный'){
                 throw HttpError(403, 'Пользователь не активен');
             }
 
@@ -124,7 +124,7 @@ class UserController {
             }
 
             const user = await Users.findOne({
-                where: {email, status: 'pending'}
+                where: {email, status: 'в ожидании'}
             });
 
             if (user.confirmToken !== token) {
@@ -289,7 +289,7 @@ class UserController {
 
             const validate = Joi.object({
                 id: Validator.numGreatOne(true).error(new Error(joiErrorMessage.id)),
-                status: Joi.string().valid('blocked', 'active').required().error(new Error(joiErrorMessage.status)),
+                status: Joi.string().valid('заблокирован', 'активный').required().error(new Error(joiErrorMessage.status)),
             }).validate({id, status});
 
             if (validate.error) {
@@ -326,7 +326,7 @@ class UserController {
                 throw HttpError(403, "Неверный адрес электронной почты");
             }
 
-            if(user.confirmToken && user.status === 'pending'){
+            if(user.confirmToken && user.status === 'в ожидании'){
                 throw HttpError(403, "Электронная почта не активна");
             }
 
@@ -375,7 +375,7 @@ class UserController {
                 throw HttpError(403, "Неверный адрес электронной почты");
             }
 
-            if(user.status !== 'active'){
+            if(user.status !== 'активный'){
                 throw HttpError(403, "Электронная почта не активна");
             }
 
@@ -452,7 +452,7 @@ class UserController {
 
             const user = await Users.findOne({where: {id: userId}});
 
-            if(user.status !== 'active'){
+            if(user.status !== 'активный'){
                 throw HttpError(403, "Электронная почта не активна");
             }
 

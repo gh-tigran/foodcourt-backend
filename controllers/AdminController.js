@@ -45,7 +45,7 @@ class AdminController {
                 throw HttpError(403, 'Неправильный логин или пароль');
             }
 
-            if (admin.status !== 'active') {
+            if (admin.status !== 'активный') {
                 throw HttpError(403, 'Админ не активен');
             }
 
@@ -95,7 +95,7 @@ class AdminController {
             const admin = await Admin.findOne({where: {email}});
 
             if (admin) {
-                if (admin.status === "deleted") {
+                if (admin.status === "удален") {
                     await Admin.destroy({where: {id: admin.id}});
                 } else {
                     throw HttpError(422, 'Админ с этого адреса уже зарегистрирован');
@@ -128,7 +128,7 @@ class AdminController {
                 confirmToken,
                 role,
                 branchId,
-                status: 'pending',
+                status: 'в ожидании',
             });
 
             res.json({
@@ -154,7 +154,7 @@ class AdminController {
             }
 
             const admin = await Admin.findOne({
-                where: {email, status: 'pending'}
+                where: {email, status: 'в ожидании'}
             });
 
             if (_.isEmpty(admin) || admin.confirmToken !== token) {
@@ -197,7 +197,7 @@ class AdminController {
 
             const admin = await Admin.findOne({where: {id}});
 
-            if (admin.status === 'deleted') {
+            if (admin.status === 'удален') {
                 throw HttpError(403, 'Админ удален');
             }
 
@@ -213,7 +213,7 @@ class AdminController {
                 }
             }
 
-            if (admin.status === 'active') {
+            if (admin.status === 'активный') {
                 firstName = undefined;
                 lastName = undefined;
                 phoneNum = undefined;
@@ -254,7 +254,7 @@ class AdminController {
             }
 
             const deletedAdmin = await Admin.update({
-                status: 'deleted'
+                status: 'удален'
             }, {where: {id}});
 
             res.json({
@@ -299,7 +299,7 @@ class AdminController {
                     throw HttpError(422, 'Ошибка отправки сообщения электронной почты');
                 }
 
-                status = 'pending';
+                status = 'в ожидании';
             }
 
             await Admin.update({
@@ -309,7 +309,7 @@ class AdminController {
                 email,
                 status,
                 confirmToken
-            }, {where: {id: adminId, status: 'active'}});
+            }, {where: {id: adminId, status: 'активный'}});
 
             const updatedAdmin = await Admin.findOne({where: {id: adminId}});
 
@@ -382,7 +382,7 @@ class AdminController {
                 throw HttpError(403, "Неверный адрес электронной почты");
             }
 
-            if (admin.status !== 'active') {
+            if (admin.status !== 'активный') {
                 throw HttpError(403, "Электронная почта не активна");
             }
 
@@ -431,7 +431,7 @@ class AdminController {
                 throw HttpError(403, "Неверный адрес электронной почты");
             }
 
-            if (admin.status !== 'active') {
+            if (admin.status !== 'активный') {
                 throw HttpError(403, "Аккаунт не активен");
             }
 

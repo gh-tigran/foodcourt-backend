@@ -9,10 +9,10 @@ class Users extends Model {
 
     static activate = async (email) => {
         await Users.update({
-            status: 'active',
+            status: 'активный',
             confirmToken: null,
             email
-        }, {where: {email, status: 'pending'}});
+        }, {where: {email, status: 'в ожидании'}});
     };
 }
 
@@ -42,9 +42,9 @@ Users.init({
         }
     },
     status: {
-        type: DataTypes.ENUM('active', 'pending', 'deleted', 'blocked'),
+        type: DataTypes.ENUM('активный', 'в ожидании', 'удален', 'заблокирован'),
         allowNull: false,
-        defaultValue: 'pending'
+        defaultValue: 'в ожидании'
     },
     confirmToken: {
         type: DataTypes.STRING(100),

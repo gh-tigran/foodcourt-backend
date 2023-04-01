@@ -22,19 +22,19 @@ const {ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME, ADMIN_LAST_NAME, ADMIN_PHONE_NUM
 
 async function main() {
     for (const Model of [
-        Admin,
         Users,
         Categories,
         Products,
         Basket,
         Slides,
         Map,
+        Admin,
         MapImages,
         ProdCatRel,
+        PaymentTypes,
         TempOrders,
         Orders,
         OrderRel,
-        PaymentTypes,
         Footer,
         FooterSocial,
         Comment,
@@ -43,7 +43,7 @@ async function main() {
         await Model.sync({alter: true});
     }
 
-    const admins = await Admin.findAll({where: {status: 'active'}});
+    const admins = await Admin.findAll({where: {status: 'активный'}});
 
     if (!admins.length) {
         await Admin.create({
@@ -53,7 +53,7 @@ async function main() {
             password: ADMIN_PASSWORD,
             phoneNum: ADMIN_PHONE_NUM,
             role: 'владелец',
-            status: 'active',
+            status: 'активный',
         });
     }
     process.exit();

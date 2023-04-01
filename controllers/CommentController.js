@@ -23,7 +23,7 @@ export default class CommentController {
     static getCommentsForAdmin = async (req, res, next) => {
         try {
             const comments = await Comment.findAll({
-                where: { status: {$not: 'deleted'} }
+                where: { status: {$not: 'удален'} }
             });
 
             res.json({

@@ -24,7 +24,6 @@ export default class OffersController {
                     model: Categories,
                     as: 'categories',
                     attributes: [],
-                    required: true,
                     where: category ? {id: category} : null,
                 }]
             });

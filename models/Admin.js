@@ -10,9 +10,9 @@ class Admin extends Model {
 
     static activate = async (email) => {
         await Admin.update({
-            status: 'active',
+            status: 'активный',
             confirmToken: null,
-        }, {where: {email, status: 'pending'}});
+        }, {where: {email, status: 'в ожидании'}});
     };
 }
 
@@ -52,9 +52,9 @@ Admin.init({
         onDelete: 'set null',
     },
     status: {
-        type: DataTypes.ENUM('active', 'pending', 'deleted'),
+        type: DataTypes.ENUM('активный', 'в ожидании', 'удален'),
         allowNull: false,
-        defaultValue: 'pending'
+        defaultValue: 'в ожидании'
     },
     role: {
         type: DataTypes.ENUM('владелец', 'супер админ', 'админ'),

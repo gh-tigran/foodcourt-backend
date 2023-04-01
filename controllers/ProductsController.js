@@ -34,8 +34,6 @@ export default class ProductsController {
                 category
             } = req.query;
 
-            console.log(category);
-
             const validate = Joi.object({
                 order: Joi.number().valid(0, 1, 2, 3).error(new Error(joiErrorMessage.parameter)),
                 page: Validator.numGreatOne(false).error(new Error(joiErrorMessage.parameter)),
@@ -90,8 +88,6 @@ export default class ProductsController {
                 offset,
                 limit
             });
-
-            console.log(products);
 
             res.json({
                 status: "ok",

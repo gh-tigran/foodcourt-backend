@@ -361,7 +361,7 @@ class OrdersController {
     //                 receiveType,
     //                 message,
     //                 address,
-    //                 status: 'pending',
+    //                 status: 'в ожидании',
     //             });
     //
     //             const orderRel = orderIds.map(id => {

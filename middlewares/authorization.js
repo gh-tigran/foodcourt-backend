@@ -50,7 +50,7 @@ export default async function authorization(req, res, next) {
         }
 
         if (userId) {
-            const user = await Users.findOne({where: {id: userId, status: 'active'}});
+            const user = await Users.findOne({where: {id: userId, status: 'активный'}});
 
             if (_.isEmpty(user)) {
                 throw HttpError(401);
@@ -62,7 +62,7 @@ export default async function authorization(req, res, next) {
         }
 
         if (adminId) {
-            const admin = await Admin.findOne({where: {id: adminId, status: 'active'}});
+            const admin = await Admin.findOne({where: {id: adminId, status: 'активный'}});
 
             if (_.isEmpty(admin)) {
                 throw HttpError(401);

@@ -5,15 +5,15 @@ const transporter = nodemailer.createTransport({
     host: "smtp.mail.ru",
     port: 465,
     auth: {
-        user: 'armmmartirosyann@mail.ru',
-        pass: 'tkc3MHn5JM6dSWg05nNw',
+        user: 'someonename2023@mail.ru',
+        pass: 'HWnaRsP5qdkwnrui1k93',
     },
 });
 
 class Email {
     static sendActivationEmail(email, token, frontUrl) {
         return transporter.sendMail({
-            from: '"Foodcourt" <armmmartirosyann@mail.ru>',
+            from: '"Foodcourt" <someonename2023@mail.ru>',
             to: email,
             subject: 'Активировать аккаунт',
             html: `<a 
@@ -27,7 +27,7 @@ class Email {
 
     static sendPasswordChangeEmail(email, token) {
         return transporter.sendMail({
-            from: '"Foodcourt" <armmmartirosyann@mail.ru>',
+            from: '"Foodcourt" <someonename2023@mail.ru>',
             to: email,
             subject: 'Ключ',
             html: `<div>Ключ - <b>${token}</b></div>`
