@@ -1,6 +1,5 @@
 import {DataTypes, Model} from "sequelize";
 import sequelize from "../services/sequelize";
-import Users from "./Users";
 import TempOrders from "./TempOrders";
 
 class PaymentTypes extends Model {

@@ -106,81 +106,34 @@ export default class ProductsController {
 
     static getProductsByCategory = async (req, res, next) => {
         try {
-            let {
-                order = 0,
-                page = 1,
-                limit = 12,
-                title
-            } = req.query;
             const {categorySlug} = req.params;
+            const {productId} = req.query;
 
             const validate = Joi.object({
-                order: Joi.number().valid(0, 1, 2, 3).error(new Error(joiErrorMessage.parameter)),
-                page: Validator.numGreatOne(false).error(new Error(joiErrorMessage.parameter)),
-                limit: Validator.numGreatOne(false).error(new Error(joiErrorMessage.parameter)),
-                title: Validator.shortText(false).error(new Error(joiErrorMessage.parameter)),
                 categorySlug: Validator.shortText(true).error(new Error(joiErrorMessage.parameter)),
-            }).validate({order, page, limit, title, categorySlug});
+            }).validate({categorySlug});
 
             if (validate.error) {
                 throw HttpError(422, validate.error);
             }
 
-            page = +page;
-            limit = +limit;
-            const offset = (page - 1) * limit;
-            const where = title ? {title: {$like: `%${title.trim()}%`}} : {};
-            const count = await Products.findAll({
-                where,
+            const products = await Products.findAll({
+                where: {
+                  id: {$not: productId}
+                },
                 include: [{
                     model: Categories,
                     as: 'categories',
                     required: true,
                     where: {
                         slugName: categorySlug
-                    },
-                    attributes: [],
+                    }
                 }],
-                attributes: ['id'],
-            });
-
-            const totalPages = Math.ceil(count.length / limit);
-            const orderTypes = Products.getOrderTypes();
-            const products = await Products.findAll({
-                where: {
-                    ...where,
-                    $or: [
-                        ...count.map(prod => {
-                            return {
-                                id: prod.id
-                            }
-                        })
-                    ]
-                },
-                include: [{
-                    model: Categories,
-                    as: 'categories',
-                    required: true,
-                }],
-                order: [
-                    [
-                        orderTypes[order].orderBy,
-                        orderTypes[order].type
-                    ],
-                ],
-                offset,
-                limit
             });
 
             res.json({
                 status: "ok",
-                data: !_.isEmpty(products) ? {
-                    products,
-                    orderTypes,
-                    totalPages,
-                    page,
-                    limit
-                } : {},
+                products: products || [],
             });
         } catch (e) {
             next(e);

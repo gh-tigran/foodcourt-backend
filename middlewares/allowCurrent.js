@@ -105,9 +105,6 @@ const allowCurrent = (permission) => async (req, res, next)=> {
     try{
         const {userId, adminId, adminRole} = req;
 
-        console.log(adminRole, 'adminRole');
-        console.log(adminId, 'adminId');
-
         if(adminId
             && adminRole === 'владелец'
             && !notAllowOwner.includes(permission)){
@@ -121,7 +118,6 @@ const allowCurrent = (permission) => async (req, res, next)=> {
         }else if(adminId
             && adminRole === 'админ'
             && allowAdmin.includes(permission)){
-            console.log(permission, 'permission');
             next();
             return;
         }

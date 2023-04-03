@@ -52,21 +52,6 @@ export default class Validator {
             Joi.string().regex(/^\d{4}$/).required()
             : Joi.string().regex(/^\d{4}$/);
     }
-    static cardNumber = (required) => {
-        return required ?
-            Joi.string().regex(/^\d{16}$/).required()
-            : Joi.string().regex(/^\d{16}$/);
-    }
-    static cvc = (required) => {
-        return required ?
-            Joi.string().regex(/^\d{3}$/).required()
-            : Joi.string().regex(/^\d{3}$/);
-    }
-    static month = (required) => {
-        return required ?
-            Joi.string().regex(/^\d{1,2}$/).required()
-            : Joi.string().regex(/^\d{1,2}$/);
-    }
     static productList = (required) => {
         return required ?
             Joi.array().items(Joi.object({

@@ -49,7 +49,7 @@ class UserController {
             }
 
             const confirmToken = uuidV4();
-            const redirectUrl = 'http://localhost:3000/users/confirm';
+            const redirectUrl = 'http://localhost:4000/users/confirm';
 
             try {
                 await Email.sendActivationEmail(email, confirmToken, redirectUrl);
